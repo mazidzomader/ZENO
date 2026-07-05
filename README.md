@@ -1,4 +1,8 @@
-# ZENO
+<p align="center">
+    <a href="https://notmazidzomader.github.io/ZENO/" target="_blank">
+        <img src="assets/img/hero banner.png" alt="Zeno" />
+    </a>
+</p>
 
 <p align="center">
 <!-- React -->
