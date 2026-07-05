@@ -1,5 +1,37 @@
 # ZENO
 
+<p align="center">
+<!-- React -->
+<img src="https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB"/>
+
+<!-- Node -->
+<img src="https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white"/>
+
+<!-- Express -->
+<img src="https://img.shields.io/badge/Express.js-000000?logo=express&logoColor=white"/>
+
+<!-- MongoDB -->
+<img src="https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white"/>
+
+<!-- JWT -->
+<img src="https://img.shields.io/badge/JWT-black?logo=jsonwebtokens"/>
+
+<br>
+
+<!-- Google Maps -->
+<img src="https://img.shields.io/badge/Google%20Maps-4285F4?logo=googlemaps&logoColor=white"/>
+
+<!-- PDFKit -->
+<img src="https://img.shields.io/badge/PDFKit-FF4B4B"/>
+
+<!-- SSLCOMMERZ -->
+<img src="https://img.shields.io/badge/SSLCOMMERZ-Payment-blue"/>
+
+<!-- MERN -->
+<img src="https://img.shields.io/badge/Stack-MERN-success"/>
+
+</p>
+
 ## Contributors
 
 This project exists thanks to all the people who contribute.
