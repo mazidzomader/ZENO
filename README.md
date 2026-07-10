@@ -1,8 +1,9 @@
-<img width="2766" height="1504" alt="image" src="https://github.com/user-attachments/assets/b01d35a8-9ea6-4aff-bcfd-127ea646120c" /><p align="center">
+<p align="center">
     <a href="https://notmazidzomader.github.io/ZENO/" target="_blank">
         <img src="https://github.com/mazidzomader/ScrapRepo/blob/main/hero%20banner%20(1).png" alt="Zeno" />
     </a>
 </p>
+<div align="center"> 
 
 <div align="center"> 
     
