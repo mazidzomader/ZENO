@@ -12,6 +12,11 @@
 
 </div>
 
+---
+
+> 📌 Project developed as part of **CSE470: Software Engineering** at **BRAC University**, Summer 2026.
+
+---
 
 <p align="center">
 <!-- MongoDB -->
@@ -38,14 +43,15 @@
 ## Contributors
 
 This project exists thanks to all the people who contribute.
-
+<div align="center"> 
+    
 | Student ID | Name |
 |---|---|
 | 24241189 | Abdullah Al Mazid Zomader |
 | 23201003 | Masrur Sarar |
 | 22299250 | Sraboni Din Awal |
 | 22299058 | Arobi Al Amin Twinkle |
-
+<br>
 <p align="center">
 
   <a href="https://github.com/mazidzomader"><img src="https://github.com/mazidzomader.png" width="60" height="60" style="border-radius:50%"/></a>
@@ -54,3 +60,8 @@ This project exists thanks to all the people who contribute.
   <a href="https://github.com/ConquerCommand"><img src="https://github.com/ConquerCommand.png" width="60" height="60" style="border-radius:50%"/></a>
     <a href="https://github.com/notmazidzomader"><img src="https://github.com/notmazidzomader.png" width="60" height="60" style="border-radius:50%"/></a>
 </p>
+</div>
+
+## License
+
+Licensed under the MIT License, Copyright © 2026-present.
