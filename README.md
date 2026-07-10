@@ -1,6 +1,6 @@
 <p align="center">
     <a href="https://notmazidzomader.github.io/ZENO/" target="_blank">
-        <img src="https://github.com/mazidzomader/ScrapRepo/blob/main/hero%20banner%20(1).png" alt="Zeno" />
+        <img src="https://github.com/mazidzomader/ScrapRepo/blob/main/hero.png" alt="Zeno" />
     </a>
 </p>
 <div align="center"> 
