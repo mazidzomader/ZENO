@@ -14,16 +14,13 @@ The palette mimics physical materials: drafting paper, harsh printer ink, and in
 
 **Strict rules:** no gradients, no background alpha/opacity, no high-saturation neon colors.
 
-| Token       | Hex       | Role                              |
-| ----------- | --------- | ---------------------------------- |
-| `bgBase`    | `#EAE8E3` | Base — industrial drafting paper   |
-| `bgAlt`     | `#DFDDD6` | Darker zone / secondary surface    |
-| `ink`       | `#111111` | Primary text & lines — harsh black |
-| `inkMuted`  | `#555555` | Secondary / muted text             |
-| `alert`     | `#C34222` | Rust / alert red                   |
-| `safe`      | `#3A5A40` | Muted industrial green             |
-| `highlight` | `#DDA15E` | Ochre — warning / active state     |
-
+| Swatch | Token | Hex | Role |
+| ------ | ----------- | --------- | ---------------------------------- |
+| ![](https://placehold.co/24x24/EAE8E3/EAE8E3.png) | `bgBase` | `#EAE8E3` | Base — industrial drafting paper |
+| ![](https://placehold.co/24x24/DFDDD6/DFDDD6.png) | `bgAlt` | `#DFDDD6` | Darker zone / secondary surface |
+| ![](https://placehold.co/24x24/111111/111111.png) | `ink` | `#111111` | Primary text & lines — harsh black |
+| ![](https://placehold.co/24x24/555555/555555.png) | `inkMuted` | `#555555` | Secondary / muted text |
+| ![](https://placehold.co/24x24/DDA15E/DDA15E.png) | `highlight` | `#DDA15E` | Ochre — accent / active state |
 ---
 
 ## 2. Typography
@@ -108,3 +105,4 @@ module.exports = {
   plugins: [],
 }
 ```
+
