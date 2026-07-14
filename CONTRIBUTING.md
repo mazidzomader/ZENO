@@ -83,8 +83,6 @@ module.exports = {
         bgAlt: '#DFDDD6',       // Darker zone
         ink: '#111111',         // Harsh black
         inkMuted: '#555555',    // Secondary data text
-        alert: '#C34222',       // Rust / alert red
-        safe: '#3A5A40',        // Muted industrial green
         highlight: '#DDA15E',   // Ochre warning / active
       },
       fontFamily: {
