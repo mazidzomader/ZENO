@@ -32,6 +32,14 @@ function Navbar() {
             </>
           ) : (
             <>
+              {(user.role === "owner" || user.role === "admin") && (
+                <Link
+                  to="/slots/mine"
+                  className="px-4 py-2 border-2 border-ink border-r-0 hover:bg-ink hover:text-bgBase"
+                >
+                  My Slots
+                </Link>
+              )}
               <span className="px-4 py-2 border-2 border-ink border-r-0">
                 {user.name}
               </span>
