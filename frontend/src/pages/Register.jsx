@@ -10,6 +10,7 @@ function Register() {
     name: "",
     email: "",
     password: "",
+    role: "renter", // Hidden default role
   });
 
   const [error, setError] = useState("");
