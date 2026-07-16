@@ -10,7 +10,7 @@ function Register() {
     name: "",
     email: "",
     password: "",
-    role: "renter", // Hidden default role
+    role: "renter",
   });
 
   const [error, setError] = useState("");
@@ -104,6 +104,22 @@ function Register() {
                   minLength={8}
                   className="border-2 border-ink bg-transparent p-3 focus:outline-none focus:bg-ink focus:text-bgBase transition-none rounded-none placeholder-inkMuted"
                 />
+              </div>
+
+              <div className="flex flex-col">
+                <label htmlFor="role" className="uppercase font-bold mb-2">
+                  Account Type
+                </label>
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  className="border-2 border-ink bg-transparent p-3 focus:outline-none focus:bg-ink focus:text-bgBase transition-none rounded-none"
+                >
+                  <option value="renter">Renter — Book parking slots</option>
+                  <option value="owner">Owner — List &amp; manage slots</option>
+                </select>
               </div>
 
               {error && (
