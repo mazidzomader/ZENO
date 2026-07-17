@@ -1,25 +1,96 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
+const { protect } = require("../middleware/authMiddleware");
 
-router.get("/:collection", async (req, res) => {
+/**
+ * Builds a MongoDB query filter based on the logged-in user's role and the
+ * collection being accessed.
+ *
+ * Roles:
+ *   - admin  → sees everything (no filter)
+ *   - owner  → sees everything (no filter; owner-scoped data handled elsewhere)
+ *   - renter → only sees records that belong to them
+ *
+ * Ownership map for renter:
+ *   Direct (renterId):  bookings, vehicles, invoices, subscriptions, reviews
+ *   Via userId:         notifications
+ *   Via bookingId:      payments, checkinouts, overstaypenalties, cancellationrefunds
+ *   Own row only:       users
+ *   Read-only / public: parkingslots, buildings, subscriptionplans, reports
+ */
+const buildFilter = async (collectionName, user, db) => {
+  // Admins and owners see everything
+  if (user.role === "admin" || user.role === "owner") {
+    return {};
+  }
+
+  // Renter — apply per-collection ownership filters
+  const userId = user._id;
+
+  // Collections with a direct renterId field
+  const renterIdCollections = [
+    "bookings",
+    "vehicles",
+    "invoices",
+    "subscriptions",
+    "reviews",
+  ];
+  if (renterIdCollections.includes(collectionName)) {
+    return { renterId: userId };
+  }
+
+  // Notifications keyed by userId
+  if (collectionName === "notifications") {
+    return { userId: userId };
+  }
+
+  // Users — renter sees only their own document
+  if (collectionName === "users") {
+    return { _id: userId };
+  }
+
+  // Collections linked to renter through their booking IDs
+  const bookingLinkedCollections = [
+    "payments",
+    "checkinouts",
+    "overstaypenalties",
+    "cancellationrefunds",
+  ];
+  if (bookingLinkedCollections.includes(collectionName)) {
+    // First, find all booking IDs belonging to this renter
+    const renterBookings = await db
+      .collection("bookings")
+      .find({ renterId: userId }, { projection: { _id: 1 } })
+      .toArray();
+    const bookingIds = renterBookings.map((b) => b._id);
+    return { bookingId: { $in: bookingIds } };
+  }
+
+  // Public / reference collections — renters can read but not personalised
+  // (parkingslots, buildings, subscriptionplans, reports)
+  return {};
+};
+
+// All DB collection routes are protected — a valid JWT is required
+router.get("/:collection", protect, async (req, res) => {
   try {
     const collectionName = req.params.collection.toLowerCase();
 
-    // Check if the requested collection is 'prelude' metadata
+    // Prelude is metadata-only, no auth filtering needed
     if (collectionName === "prelude") {
       return res.json([
         {
           ServerVersion: "8.3.4",
           ToolVersion: "100.17.0",
-          Source: "prelude.json"
-        }
+          Source: "prelude.json",
+        },
       ]);
     }
 
     const db = mongoose.connection.db;
-    
-    // Fetch all collection profiles in database to confirm existence
+
+    // Confirm the collection exists in MongoDB
     const collections = await db.listCollections().toArray();
     const exists = collections.some(
       (col) => col.name.toLowerCase() === collectionName
@@ -29,8 +100,10 @@ router.get("/:collection", async (req, res) => {
       return res.json([]);
     }
 
-    // Direct MongoDB find query
-    const data = await db.collection(collectionName).find({}).toArray();
+    // Build role-aware filter and fetch only what this user is allowed to see
+    const filter = await buildFilter(collectionName, req.user, db);
+    const data = await db.collection(collectionName).find(filter).toArray();
+
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });

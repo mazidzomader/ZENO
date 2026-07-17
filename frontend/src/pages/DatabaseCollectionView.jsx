@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import API from "../services/api";
-import { useAuth } from "../context/AuthContext";
+
 import { RefreshCw } from "lucide-react";
 
 export function DatabaseCollectionView() {
   const { collectionName } = useParams();
-  const { user } = useAuth();
+
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,14 +16,8 @@ export function DatabaseCollectionView() {
     setError(null);
     try {
       const res = await API.get(`/db/${collectionName}`);
-      let fetchedData = res.data;
-
-      // Filter User collection to only show the logged-in user's info
-      if (collectionName === "users" && user && user.email) {
-        fetchedData = fetchedData.filter((item) => item.email === user.email);
-      }
-
-      setData(fetchedData);
+      // Backend already returns only records this user is allowed to see
+      setData(res.data);
     } catch (err) {
       setError(err.message || "Failed to load database records");
     } finally {
