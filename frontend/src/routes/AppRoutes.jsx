@@ -17,6 +17,8 @@ import BulkSlotForm from "../pages/slots/BulkSlotForm";
 import PricingRules from "../pages/pricing/PricingRules";
 import PricingRuleForm from "../pages/pricing/PricingRuleForm";
 
+// Feature 20 — Reports & Export
+import Reports from "../pages/Reports";
 
 
 function AppRoutes() {
@@ -29,6 +31,11 @@ function AppRoutes() {
 
       {/* Dynamic Database Table View Router */}
       <Route element={<DashboardLayout />}>
+        {/* Intercept 'reports' static path BEFORE the dynamic parameter fallback catches it added by real developer*/}
+        <Route path="/collections/reports" element={<Reports />} />
+        {/* Shortcut: If someone types just /reports, safely redirect them to the dashboard version added by real developer*/}
+        <Route path="/reports" element={<Navigate to="/collections/reports" replace />} />
+
         {/* Dynamic catch for every single database table query */}
         <Route path="/collections/:collectionName" element={<DatabaseCollectionView />} />
 
@@ -45,7 +52,7 @@ function AppRoutes() {
         <Route path="/pricing-rules" element={<PricingRules />} />
         <Route path="/pricing-rules/new" element={<PricingRuleForm />} />
         <Route path="/pricing-rules/:id/edit" element={<PricingRuleForm />} />
-
+        
         
       </Route>
 
