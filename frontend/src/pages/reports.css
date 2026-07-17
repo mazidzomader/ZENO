@@ -1,0 +1,403 @@
+/* ============================================================
+   ZENO — REPORTS & EXPORT SYSTEM
+   Design tokens per ZENO Design System & Style Guide
+   ============================================================ */
+
+:root {
+  --bgBase: #EAE8E3;
+  --bgAlt: #DFDDD6;
+  --ink: #111111;
+  --inkMuted: #555555;
+  --highlight: #DDA15E;
+
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bgBase);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+
+.frame {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- TOP BAR ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--bgBase);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.02em;
+}
+
+.divider-v {
+  width: 1px;
+  height: 18px;
+  background: var(--ink);
+  opacity: 0.4;
+}
+
+.module-tag {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--inkMuted);
+  letter-spacing: 0.03em;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.sys-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sys-clock {
+  color: var(--inkMuted);
+}
+
+/* ---------- STATUS DOTS ---------- */
+
+.dot {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  background: var(--ink);
+}
+
+.dot-ok { background: var(--ink); }
+.dot-idle { background: var(--inkMuted); }
+.dot-fail { background: var(--ink); }
+
+.dot-processing,
+.dot-ok.blink {
+  animation: blink-fast 1s steps(1) infinite;
+}
+
+.status-processing .dot {
+  background: var(--highlight);
+  animation: blink-fast 0.8s steps(1) infinite;
+}
+
+@keyframes blink-fast {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* ---------- LAYOUT SPLIT (30 / 70) ---------- */
+
+.body-split {
+  display: flex;
+  flex: 1;
+}
+
+.report-side-panel {
+  width: 30%;
+  min-width: 280px;
+  border-right: 2px solid var(--ink);
+  background: var(--bgAlt);
+  padding: 28px 24px;
+}
+
+.content {
+  width: 70%;
+  padding: 28px 24px;
+}
+
+/* ---------- SIDEBAR ---------- */
+
+.panel-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  margin: 0 0 8px;
+  letter-spacing: 0.01em;
+}
+
+.panel-sub {
+  font-size: 13px;
+  color: var(--inkMuted);
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.form-block {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.split-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.field-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--inkMuted);
+  letter-spacing: 0.05em;
+}
+
+.field-input {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--bgBase);
+  border: 1px solid var(--ink);
+  padding: 9px 10px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.field-input:focus {
+  border: 2px solid var(--highlight);
+  padding: 8px 9px;
+}
+
+select.field-input {
+  background-image: none;
+}
+
+/* segmented control (button group, not native radio) */
+
+.segmented {
+  display: flex;
+  border: 1px solid var(--ink);
+}
+
+.seg-btn {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  background: var(--bgBase);
+  color: var(--inkMuted);
+  border: none;
+  border-right: 1px solid var(--ink);
+  padding: 9px 6px;
+  cursor: pointer;
+}
+
+.seg-btn:last-child {
+  border-right: none;
+}
+
+.seg-btn.active {
+  background: var(--ink);
+  color: var(--bgBase);
+}
+
+.seg-btn:focus-visible {
+  outline: 2px solid var(--highlight);
+  outline-offset: -2px;
+}
+
+.btn-generate {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  background: var(--ink);
+  color: var(--bgBase);
+  border: 2px solid var(--ink);
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: none;
+}
+
+.btn-generate:hover {
+  background: var(--highlight);
+  border-color: var(--highlight);
+  color: var(--ink);
+}
+
+.btn-generate:focus-visible {
+  outline: 2px solid var(--highlight);
+  outline-offset: 2px;
+}
+
+.btn-arrow {
+  font-size: 15px;
+}
+
+.sidebar-footnote {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ink);
+  font-size: 12px;
+  color: var(--inkMuted);
+  line-height: 1.6;
+  display: flex;
+  gap: 8px;
+}
+
+.mono-em {
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+/* ---------- CONTENT / TABLE ---------- */
+
+.content-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+}
+
+.content-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  margin: 0;
+}
+
+.content-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--inkMuted);
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.report-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--inkMuted);
+  letter-spacing: 0.05em;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ink);
+  white-space: nowrap;
+}
+
+.report-table td {
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--ink);
+  font-size: 13px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.report-table tbody tr:hover {
+  background: var(--bgAlt);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.status-ready .dot { background: var(--ink); }
+.status-failed .dot { background: var(--ink); }
+.status-processing .dot { background: var(--highlight); }
+
+.link-download {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ink);
+}
+
+.link-download:hover {
+  color: var(--highlight);
+  border-bottom-color: var(--highlight);
+}
+
+.link-disabled {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--inkMuted);
+}
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 860px) {
+  .body-split {
+    flex-direction: column;
+  }
+  .report-side-panel, .content {
+    width: 100%;
+  }
+  .report-side-panel {
+    border-right: none;
+    border-bottom: 2px solid var(--ink);
+  }
+  .report-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot-processing,
+  .status-processing .dot {
+    animation: none;
+    opacity: 1;
+  }
+}
