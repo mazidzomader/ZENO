@@ -23,6 +23,8 @@ import Reports from "../pages/Reports";
 // Feature — Invoice Generation
 import { InvoiceList, InvoiceView } from "../pages/InvoicePage";
 
+import Dashboard from "../pages/Dashboard";
+
 
 function AppRoutes() {
   return (
@@ -42,8 +44,8 @@ function AppRoutes() {
         {/* Dynamic catch for every single database table query */}
         <Route path="/collections/:collectionName" element={<DatabaseCollectionView />} />
 
-        {/* Redirect aliases directly to database collections */}
-        <Route path="/dashboard" element={<Navigate to="/collections/users" replace />} />
+        {/* Main Dashboard Panel */}
+        <Route path="/dashboard" element={<Dashboard />} />
 
         {/* Feature 13 — Slot CRUD Management */}
         <Route path="/slots/mine" element={<MySlots />} />

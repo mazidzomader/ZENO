@@ -93,30 +93,6 @@ export function UserProfile() {
               <span className="text-emerald-600 font-bold">[ONLINE]</span>
             </div>
 
-            <button
-              onClick={() => {
-                setIsDropdownOpen(false);
-                navigate("/profile");
-              }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-ink hover:bg-bgAlt transition-colors outline-none focus-visible:bg-bgAlt"
-              role="menuitem"
-            >
-              <User className="w-3.5 h-3.5 stroke-[2.5]" />
-              Profile
-            </button>
-
-            <button
-              onClick={() => {
-                setIsDropdownOpen(false);
-                navigate("/settings");
-              }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-ink hover:bg-bgAlt transition-colors outline-none focus-visible:bg-bgAlt"
-              role="menuitem"
-            >
-              <Shield className="w-3.5 h-3.5 stroke-[2.5]" />
-              Account
-            </button>
-
             {(userRole === "owner" || userRole === "admin") && (
               <div className="border-t border-b border-ink/20 my-1 py-1">
                 <div className="px-2 py-1 text-[8px] text-inkMuted">MANAGE:</div>
@@ -146,73 +122,6 @@ export function UserProfile() {
                 </button>
               </div>
             )}
-
-            {userRole === "renter" && (
-              <div className="border-t border-b border-ink/20 my-1 py-1">
-                <div className="px-2 py-1 text-[8px] text-inkMuted">MANAGE:</div>
-
-                <button
-                  onClick={() => {
-                    setIsDropdownOpen(false);
-                    navigate("/booking");
-                  }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-ink hover:bg-bgAlt transition-colors outline-none focus-visible:bg-bgAlt"
-                  role="menuitem"
-                >
-                  <Calendar className="w-3.5 h-3.5 stroke-[2.5]" />
-                  Booking
-                </button>
-              </div>
-            )}
-
-            <div className="border-t border-b border-ink/20 my-1 py-1 bg-bgAlt/30">
-              <div className="px-2 py-1 text-[8px] text-inkMuted">SELECT THEME:</div>
-
-              <button
-                onClick={() => setTheme("light")}
-                className={`w-full flex items-center justify-between px-3 py-1 text-left ${
-                  theme === "light" ? "text-highlight" : "text-ink hover:bg-bgAlt"
-                }`}
-                role="menuitemradio"
-                aria-checked={theme === "light"}
-              >
-                <span className="flex items-center gap-1.5">
-                  <Sun className="w-3 h-3 stroke-[2.5]" />
-                  LIGHT
-                </span>
-                {theme === "light" && <Check className="w-3 h-3 stroke-[3]" />}
-              </button>
-
-              <button
-                onClick={() => setTheme("dark")}
-                className={`w-full flex items-center justify-between px-3 py-1 text-left ${
-                  theme === "dark" ? "text-highlight" : "text-ink hover:bg-bgAlt"
-                }`}
-                role="menuitemradio"
-                aria-checked={theme === "dark"}
-              >
-                <span className="flex items-center gap-1.5">
-                  <Moon className="w-3 h-3 stroke-[2.5]" />
-                  DARK
-                </span>
-                {theme === "dark" && <Check className="w-3 h-3 stroke-[3]" />}
-              </button>
-
-              <button
-                onClick={() => setTheme("system")}
-                className={`w-full flex items-center justify-between px-3 py-1 text-left ${
-                  theme === "system" ? "text-highlight" : "text-ink hover:bg-bgAlt"
-                }`}
-                role="menuitemradio"
-                aria-checked={theme === "system"}
-              >
-                <span className="flex items-center gap-1.5">
-                  <Monitor className="w-3 h-3 stroke-[2.5]" />
-                  SYSTEM
-                </span>
-                {theme === "system" && <Check className="w-3 h-3 stroke-[3]" />}
-              </button>
-            </div>
 
             <button
               onClick={handleLogout}

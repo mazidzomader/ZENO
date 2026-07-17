@@ -302,13 +302,23 @@ export function InvoiceList() {
     return () => { document.title = "ZENO"; };
   }, []);
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this invoice?")) return;
+    try {
+      await API.delete(`/invoices/${id}`);
+      setInvoices((prev) => prev.filter((inv) => inv._id !== id));
+    } catch (err) {
+      alert("Failed to delete invoice: " + (err.response?.data?.error || err.message));
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-6 select-none">
+    <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="border-b-4 border-ink pb-4 flex items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-extrabold tracking-tight uppercase text-ink">
-            COLLECTION // Invoices
+            Invoices
           </h1>
           <p className="font-mono text-xs text-inkMuted mt-1 uppercase">
             Invoice records · [{invoices.length} TOTAL]
@@ -362,13 +372,19 @@ export function InvoiceList() {
                   <td className="p-3 border-r border-ink/10">
                     {inv.amount != null ? inv.amount.toLocaleString() : "—"}
                   </td>
-                  <td className="p-3 text-center">
+                  <td className="p-3 text-center flex justify-center gap-2">
                     <Link
                       to={`/invoices/${inv._id}`}
                       className="inline-flex items-center gap-1.5 px-3 py-1 border-2 border-ink bg-bgBase text-ink font-bold uppercase tracking-wider hover:bg-ink hover:text-bgBase transition-colors text-xs"
                     >
                       View
                     </Link>
+                    <button
+                      onClick={() => handleDelete(inv._id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 border-2 border-alert bg-bgBase text-alert font-bold uppercase tracking-wider hover:bg-alert hover:text-bgBase transition-colors text-xs"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}

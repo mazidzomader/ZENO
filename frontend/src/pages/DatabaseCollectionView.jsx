@@ -66,18 +66,22 @@ export function DatabaseCollectionView() {
   const getTitle = () => {
     if (!collectionName) return "";
     if (collectionName === "cancellationrefunds") return "Cancellation and Refunds";
-    if (collectionName === "checkinouts") return "Checkin/outs";
-    if (collectionName === "subscriptionplans") return "Subscriptionplans";
+    if (collectionName === "checkinouts") return "Check-in/outs";
+    if (collectionName === "subscriptionplans") return "Subscription Plans";
+    if (collectionName === "parkingslots") return "Parking Slots";
+    if (collectionName === "overstaypenalties") return "Overstay Penalties";
+    if (collectionName === "subscriptions") return "Subscriptions";
+    if (collectionName === "notifications") return "Notifications";
     return collectionName.charAt(0).toUpperCase() + collectionName.slice(1);
   };
 
   return (
-    <div className="flex flex-col gap-6 select-none">
+    <div className="flex flex-col gap-6">
       {/* Title Header Bar */}
       <div className="border-b-4 border-ink pb-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-extrabold tracking-tight uppercase text-ink">
-            COLLECTION // {getTitle()}
+            {getTitle()}
           </h1>
           <p className="font-mono text-xs text-inkMuted mt-1 uppercase">
             LIVE SCHEMALESS VIEW // MONGO_DB://{collectionName} // [{data.length} RECORDS]

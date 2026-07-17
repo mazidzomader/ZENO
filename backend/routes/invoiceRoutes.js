@@ -82,6 +82,70 @@ router.get("/", protect, async (req, res) => {
   }
 });
 
+// ── GET /api/invoices/dashboard-summary ──────────────────────────────────────
+// Returns a aggregated dashboard summary for the logged-in user
+router.get("/dashboard-summary", protect, async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    const userId = toId(req.user._id);
+
+    if (req.user.role === "renter") {
+      // 1. Determine active status
+      const now = new Date();
+      const activeBooking = await db.collection("bookings").findOne({
+        renterId: userId,
+        status: "confirmed",
+        startTime: { $lte: now },
+        endTime: { $gte: now }
+      });
+      const status = activeBooking ? "Parked" : "No active booking";
+
+      // 2. Fetch user's vehicles
+      const vehicles = await db.collection("vehicles").find({ renterId: userId }).toArray();
+
+      // 3. Fetch reviews and calculate average rating
+      const reviews = await db.collection("reviews").find({ renterId: userId }).toArray();
+      const avgRating = reviews.length > 0
+        ? (reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviews.length).toFixed(1)
+        : "N/A";
+
+      // 4. Extra stats
+      const totalInvoices = await db.collection("invoices").countDocuments({ renterId: userId });
+      const totalBookings = await db.collection("bookings").countDocuments({ renterId: userId });
+
+      const renterBookings = await db
+        .collection("bookings")
+        .find({ renterId: userId }, { projection: { _id: 1 } })
+        .toArray();
+      const bookingIds = renterBookings.map((b) => b._id);
+
+      const payments = await db.collection("payments").find({
+        bookingId: { $in: bookingIds },
+        status: "success"
+      }).toArray();
+      const totalSpent = payments.reduce((acc, pay) => acc + pay.amount, 0);
+
+      return res.json({
+        role: "renter",
+        status,
+        vehicles: vehicles.map(v => ({ plateNumber: v.plateNumber, type: v.type, sizeClass: v.sizeClass })),
+        avgRating,
+        totalInvoices,
+        totalBookings,
+        totalSpent
+      });
+    }
+
+    // Fallback for owner and admin
+    return res.json({
+      role: req.user.role,
+      message: `${req.user.role.charAt(0).toUpperCase() + req.user.role.slice(1)} dashboard features coming soon.`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET /api/invoices/:id ────────────────────────────────────────────────────
 // Returns a fully-populated invoice by joining across 6 collections
 router.get("/:id", protect, async (req, res) => {
@@ -121,7 +185,7 @@ router.get("/:id", protect, async (req, res) => {
     const [slot, vehicle] = booking
       ? await Promise.all([
           db.collection("parkingslots").findOne({ _id: booking.slotId }),
-          db.collection("vehicles").findOne({ _id: booking.vehicleId }),
+          db.collection("vehicles").findOne({ renterId: inv.renterId }),
         ])
       : [null, null];
 
@@ -163,6 +227,43 @@ router.get("/:id", protect, async (req, res) => {
           }
         : null,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── DELETE /api/invoices/:id ─────────────────────────────────────────────────
+// Deletes an invoice from the database
+router.delete("/:id", protect, async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+
+    const inv = await db
+      .collection("invoices")
+      .findOne({ _id: toId(req.params.id) });
+
+    if (!inv) return res.status(404).json({ error: "Invoice not found." });
+
+    // Renter can only delete their own invoices
+    if (
+      req.user.role === "renter" &&
+      String(inv.renterId) !== String(req.user._id)
+    ) {
+      return res.status(403).json({ error: "Access denied." });
+    }
+
+    // Owner can only delete invoices that belong to their buildings
+    if (req.user.role === "owner") {
+      const booking = await db.collection("bookings").findOne({ _id: inv.bookingId });
+      const slot = booking ? await db.collection("parkingslots").findOne({ _id: booking.slotId }) : null;
+      const building = slot ? await db.collection("buildings").findOne({ _id: slot.buildingId }) : null;
+      if (!building || String(building.ownerId) !== String(req.user._id)) {
+        return res.status(403).json({ error: "Access denied." });
+      }
+    }
+
+    await db.collection("invoices").deleteOne({ _id: toId(req.params.id) });
+    res.json({ message: "Invoice deleted successfully." });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
