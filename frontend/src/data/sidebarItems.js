@@ -54,6 +54,12 @@ export const sidebarItems = [
     path: "/collections/invoices"
   },
   {
+    id: "invoices-view",
+    title: "Invoice Viewer",
+    icon: "FileText",
+    path: "/invoices"
+  },
+  {
     id: "payments",
     title: "Payments",
     icon: "DollarSign",

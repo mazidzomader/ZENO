@@ -20,6 +20,9 @@ import PricingRuleForm from "../pages/pricing/PricingRuleForm";
 // Feature 20 — Reports & Export
 import Reports from "../pages/Reports";
 
+// Feature — Invoice Generation
+import { InvoiceList, InvoiceView } from "../pages/InvoicePage";
+
 
 function AppRoutes() {
   return (
@@ -47,6 +50,10 @@ function AppRoutes() {
         <Route path="/slots/new" element={<SlotForm />} />
         <Route path="/slots/:id/edit" element={<SlotForm />} />
         <Route path="/slots/bulk" element={<BulkSlotForm />} />
+
+        {/* Feature — Invoice Generation */}
+        <Route path="/invoices" element={<InvoiceList />} />
+        <Route path="/invoices/:id" element={<InvoiceView />} />
 
         {/* Feature 5 — Dynamic Pricing Management */}
         <Route path="/pricing-rules" element={<PricingRules />} />
