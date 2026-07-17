@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Shield, Sun, Moon, Monitor, LogOut, ChevronUp, Check } from "lucide-react";
+import { User, Shield, Sun, Moon, Monitor, LogOut, ChevronUp, Check, Grid, Tag, Calendar } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useSidebar } from "../hooks/useSidebar";
 
@@ -12,7 +12,6 @@ export function UserProfile() {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -33,7 +32,6 @@ export function UserProfile() {
     navigate("/login");
   };
 
-  // Safe fallback values
   const userName = user?.name || "SYS_OPERATOR";
   const userRole = user?.role || "GUEST";
   const userInitials = userName
@@ -45,7 +43,6 @@ export function UserProfile() {
 
   return (
     <div ref={dropdownRef} className="relative border-t-2 border-ink bg-bgAlt p-3 select-none">
-      {/* Profile Trigger Area */}
       <button
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         className="w-full flex items-center gap-3 p-1.5 border border-ink bg-bgBase text-ink hover:bg-highlight hover:text-bgBase transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ink"
@@ -53,14 +50,11 @@ export function UserProfile() {
         aria-expanded={isDropdownOpen}
         aria-label="User Profile menu"
       >
-        {/* Avatar Box */}
         <div className="relative w-8 h-8 flex items-center justify-center border-2 border-ink bg-bgAlt text-ink font-mono text-xs font-bold shrink-0">
           {userInitials}
-          {/* Online Indicator Green Dot */}
           <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-emerald-600 border border-ink animate-pulse" />
         </div>
 
-        {/* User Info (hidden when collapsed) */}
         {!isCollapsed && (
           <div className="flex-grow text-left overflow-hidden">
             <div className="font-mono text-[10px] font-bold uppercase tracking-wider truncate text-ink">
@@ -73,7 +67,6 @@ export function UserProfile() {
           </div>
         )}
 
-        {/* Chevron Up Indicator (hidden when collapsed) */}
         {!isCollapsed && (
           <ChevronUp
             className={`w-3.5 h-3.5 text-ink shrink-0 stroke-[2.5] transition-transform duration-100 ease-linear ${
@@ -83,7 +76,6 @@ export function UserProfile() {
         )}
       </button>
 
-      {/* User Dropdown Menu */}
       <AnimatePresence>
         {isDropdownOpen && (
           <motion.div
@@ -96,13 +88,11 @@ export function UserProfile() {
             }`}
             role="menu"
           >
-            {/* Online Status Readout */}
             <div className="px-2 py-1.5 border-b border-ink/20 text-inkMuted text-[9px] flex items-center justify-between">
               <span>STATUS:</span>
               <span className="text-emerald-600 font-bold">[ONLINE]</span>
             </div>
 
-            {/* Profile Route Link */}
             <button
               onClick={() => {
                 setIsDropdownOpen(false);
@@ -115,7 +105,6 @@ export function UserProfile() {
               Profile
             </button>
 
-            {/* Account Route Link */}
             <button
               onClick={() => {
                 setIsDropdownOpen(false);
@@ -128,11 +117,57 @@ export function UserProfile() {
               Account
             </button>
 
-            {/* Theme Selection Section */}
+            {(userRole === "owner" || userRole === "admin") && (
+              <div className="border-t border-b border-ink/20 my-1 py-1">
+                <div className="px-2 py-1 text-[8px] text-inkMuted">MANAGE:</div>
+
+                <button
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    navigate("/slots/mine");
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-ink hover:bg-bgAlt transition-colors outline-none focus-visible:bg-bgAlt"
+                  role="menuitem"
+                >
+                  <Grid className="w-3.5 h-3.5 stroke-[2.5]" />
+                  My Slots
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    navigate("/pricing-rules");
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-ink hover:bg-bgAlt transition-colors outline-none focus-visible:bg-bgAlt"
+                  role="menuitem"
+                >
+                  <Tag className="w-3.5 h-3.5 stroke-[2.5]" />
+                  Pricing Rules
+                </button>
+              </div>
+            )}
+
+            {userRole === "renter" && (
+              <div className="border-t border-b border-ink/20 my-1 py-1">
+                <div className="px-2 py-1 text-[8px] text-inkMuted">MANAGE:</div>
+
+                <button
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    navigate("/booking");
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-ink hover:bg-bgAlt transition-colors outline-none focus-visible:bg-bgAlt"
+                  role="menuitem"
+                >
+                  <Calendar className="w-3.5 h-3.5 stroke-[2.5]" />
+                  Booking
+                </button>
+              </div>
+            )}
+
             <div className="border-t border-b border-ink/20 my-1 py-1 bg-bgAlt/30">
               <div className="px-2 py-1 text-[8px] text-inkMuted">SELECT THEME:</div>
-              
-              {/* Light Mode Button */}
+
               <button
                 onClick={() => setTheme("light")}
                 className={`w-full flex items-center justify-between px-3 py-1 text-left ${
@@ -148,7 +183,6 @@ export function UserProfile() {
                 {theme === "light" && <Check className="w-3 h-3 stroke-[3]" />}
               </button>
 
-              {/* Dark Mode Button */}
               <button
                 onClick={() => setTheme("dark")}
                 className={`w-full flex items-center justify-between px-3 py-1 text-left ${
@@ -164,7 +198,6 @@ export function UserProfile() {
                 {theme === "dark" && <Check className="w-3 h-3 stroke-[3]" />}
               </button>
 
-              {/* System Mode Button */}
               <button
                 onClick={() => setTheme("system")}
                 className={`w-full flex items-center justify-between px-3 py-1 text-left ${
@@ -181,7 +214,6 @@ export function UserProfile() {
               </button>
             </div>
 
-            {/* Logout Button */}
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-alert hover:bg-alert hover:text-bgBase transition-colors outline-none focus-visible:bg-alert focus-visible:text-bgBase"

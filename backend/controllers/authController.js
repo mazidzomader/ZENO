@@ -1,9 +1,10 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     // Check if all fields are provided
     if (!name || !email || !password) {
@@ -21,6 +22,10 @@ const registerUser = async (req, res) => {
       });
     }
 
+    // Only accept a known role; anything else (or missing) falls back to the schema default ("renter")
+    const allowedRoles = ["admin", "owner", "renter"];
+    const assignedRole = allowedRoles.includes(role) ? role : undefined;
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create a new user
@@ -28,11 +33,17 @@ const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      ...(assignedRole && { role: assignedRole }),
     });
 
     res.status(201).json({
       message: "User registered successfully.",
-      user,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
 
   } catch (error) {
@@ -79,6 +90,7 @@ const loginUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     });
 

@@ -8,6 +8,17 @@ import Register from "../pages/Register";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { DatabaseCollectionView } from "../pages/DatabaseCollectionView";
 
+// Feature 13 — Slot CRUD
+import MySlots from "../pages/slots/MySlots";
+import SlotForm from "../pages/slots/SlotForm";
+import BulkSlotForm from "../pages/slots/BulkSlotForm";
+
+// Feature 5 — Dynamic Pricing
+import PricingRules from "../pages/pricing/PricingRules";
+import PricingRuleForm from "../pages/pricing/PricingRuleForm";
+
+
+
 function AppRoutes() {
   return (
     <Routes>
@@ -20,9 +31,22 @@ function AppRoutes() {
       <Route element={<DashboardLayout />}>
         {/* Dynamic catch for every single database table query */}
         <Route path="/collections/:collectionName" element={<DatabaseCollectionView />} />
-        
+
         {/* Redirect aliases directly to database collections */}
         <Route path="/dashboard" element={<Navigate to="/collections/users" replace />} />
+
+        {/* Feature 13 — Slot CRUD Management */}
+        <Route path="/slots/mine" element={<MySlots />} />
+        <Route path="/slots/new" element={<SlotForm />} />
+        <Route path="/slots/:id/edit" element={<SlotForm />} />
+        <Route path="/slots/bulk" element={<BulkSlotForm />} />
+
+        {/* Feature 5 — Dynamic Pricing Management */}
+        <Route path="/pricing-rules" element={<PricingRules />} />
+        <Route path="/pricing-rules/new" element={<PricingRuleForm />} />
+        <Route path="/pricing-rules/:id/edit" element={<PricingRuleForm />} />
+
+        
       </Route>
 
       {/* Fallback Catch-All */}
