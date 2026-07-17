@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -7,6 +7,10 @@ import Layout from "../components/Layout";
 function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  useEffect(() => {
+    document.title = "Login";
+  }, []);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -31,7 +35,7 @@ function Login() {
     try {
       const res = await API.post("/auth/login", formData);
       login(res.data.user, res.data.token);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed.");
     } finally {

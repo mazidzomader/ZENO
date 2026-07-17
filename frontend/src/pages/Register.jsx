@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "../services/api";
 import Layout from "../components/Layout";
 
 function Register() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = "Register";
+  }, []);
 
   const [formData, setFormData] = useState({
     name: "",

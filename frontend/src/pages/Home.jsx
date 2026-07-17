@@ -52,6 +52,10 @@ function EyeIcon({ crossed }) {
 function Home() {
   const { login } = useAuth();
 
+  useEffect(() => {
+    document.title = "ZENO";
+  }, []);
+
   /* ---------- Rate Estimator ---------- */
   const [zoneRate, setZoneRate] = useState(ZONE_RATES[0].value);
   const [duration, setDuration] = useState(DURATIONS[1].value);

@@ -4,6 +4,7 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const slotRoutes = require("./routes/slotRoutes");
+const dbRoutes = require("./routes/dbRoutes");
 dotenv.config();
 
 connectDB();
@@ -14,6 +15,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/slots", slotRoutes);
+app.use("/api/db", dbRoutes);
 
 app.get("/", (req, res) => {
   res.send("ZENO backend is running!");
