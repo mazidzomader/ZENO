@@ -8,6 +8,7 @@ const dbRoutes = require("./routes/dbRoutes");
 const buildingRoutes = require("./routes/buildingRoutes");
 const pricingRuleRoutes = require("./routes/pricingRuleRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const invoiceRoutes = require("./routes/invoiceRoutes");
 dotenv.config();
 
 connectDB();
@@ -22,6 +23,7 @@ app.use("/api/db", dbRoutes);
 app.use("/api/buildings", buildingRoutes);
 app.use("/api/pricing-rules", pricingRuleRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/invoices", invoiceRoutes);
 
 app.get("/", (req, res) => {
   res.send("ZENO backend is running!");

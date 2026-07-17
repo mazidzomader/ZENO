@@ -1,9 +1,9 @@
 export const sidebarItems = [
   {
-    id: "users",
-    title: "User",
-    icon: "Users",
-    path: "/collections/users"
+    id: "dashboard",
+    title: "Dashboard",
+    icon: "LayoutDashboard",
+    path: "/dashboard"
   },
   {
     id: "vehicles",
@@ -19,7 +19,7 @@ export const sidebarItems = [
   },
   {
     id: "parkingslots",
-    title: "Parkingslots",
+    title: "Parking Slots",
     icon: "Grid",
     path: "/collections/parkingslots"
   },
@@ -31,13 +31,13 @@ export const sidebarItems = [
   },
   {
     id: "checkinouts",
-    title: "Checkin/outs",
+    title: "Check-in/outs",
     icon: "ClipboardCheck",
     path: "/collections/checkinouts"
   },
   {
     id: "overstaypenalties",
-    title: "OverstayPenalties",
+    title: "Overstay Penalties",
     icon: "AlertTriangle",
     path: "/collections/overstaypenalties"
   },
@@ -48,10 +48,10 @@ export const sidebarItems = [
     path: "/collections/cancellationrefunds"
   },
   {
-    id: "invoices",
-    title: "Invoices",
+    id: "invoices-view",
+    title: "Invoice Viewer",
     icon: "Receipt",
-    path: "/collections/invoices"
+    path: "/invoices"
   },
   {
     id: "payments",
@@ -61,13 +61,13 @@ export const sidebarItems = [
   },
   {
     id: "subscriptionplans",
-    title: "Subscriptionplans",
+    title: "Subscription Plans",
     icon: "Briefcase",
     path: "/collections/subscriptionplans"
   },
   {
     id: "subscriptions",
-    title: "Subscription",
+    title: "Subscriptions",
     icon: "KeyRound",
     path: "/collections/subscriptions"
   },
@@ -85,7 +85,7 @@ export const sidebarItems = [
   },
   {
     id: "notifications",
-    title: "Notification",
+    title: "Notifications",
     icon: "Bell",
     path: "/collections/notifications"
   },
