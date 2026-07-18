@@ -24,6 +24,7 @@ import Reports from "../pages/Reports";
 import { InvoiceList, InvoiceView } from "../pages/InvoicePage";
 
 import Dashboard from "../pages/Dashboard";
+import ReviewsPage from "../pages/ReviewsPage";
 
 
 function AppRoutes() {
@@ -56,6 +57,9 @@ function AppRoutes() {
         {/* Feature — Invoice Generation */}
         <Route path="/invoices" element={<InvoiceList />} />
         <Route path="/invoices/:id" element={<InvoiceView />} />
+
+        {/* Feature — Ratings & Reviews */}
+        <Route path="/reviews" element={<ReviewsPage />} />
 
         {/* Feature 5 — Dynamic Pricing Management */}
         <Route path="/pricing-rules" element={<PricingRules />} />

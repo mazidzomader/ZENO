@@ -192,7 +192,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between border-b-2 border-ink pb-3">
                     <h3 className="font-display font-extrabold text-lg uppercase text-ink flex items-center gap-2">
                       <Star className="w-5 h-5 text-highlight fill-highlight" />
-                      Average Rating
+                      Average Given Ratings 
                     </h3>
                   </div>
 

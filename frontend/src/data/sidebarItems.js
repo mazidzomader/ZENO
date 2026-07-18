@@ -73,9 +73,9 @@ export const sidebarItems = [
   },
   {
     id: "reviews",
-    title: "Reviews",
+    title: "Ratings & Reviews",
     icon: "Star",
-    path: "/collections/reviews"
+    path: "/reviews"
   },
   {
     id: "reports",
