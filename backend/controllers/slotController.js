@@ -211,18 +211,65 @@ const bulkCreateSlots = async (req, res) => {
 // @desc    Get all slots (optionally filtered by building or status)
 // @route   GET /api/slots
 // @access  Public
+
 const getSlots = async (req, res) => {
   try {
     const filter = {};
 
-    if (req.query.building) filter.building = req.query.building;
-    if (req.query.status) filter.status = req.query.status;
+    if (req.query.building) {
+      filter.building = req.query.building;
+    }
 
-    const slots = await Slot.find(filter).populate("building", "name address");
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
 
-    naturalSortBySlotNumber(slots);
+    // New records use "building".
+    // Some older database records use the legacy field "buildingId".
+    const slots = await Slot.find(filter)
+      .populate("building", "name address")
+      .lean();
 
-    res.status(200).json({ count: slots.length, slots });
+    const legacyBuildingIds = [
+      ...new Set(
+        slots
+          .filter((slot) => !slot.building && slot.buildingId)
+          .map((slot) => String(slot.buildingId))
+      ),
+    ];
+
+    let legacyBuildingMap = new Map();
+
+    if (legacyBuildingIds.length > 0) {
+      const legacyBuildings = await Building.find({
+        _id: { $in: legacyBuildingIds },
+      })
+        .select("name address")
+        .lean();
+
+      legacyBuildingMap = new Map(
+        legacyBuildings.map((building) => [
+          String(building._id),
+          building,
+        ])
+      );
+    }
+
+    const enrichedSlots = slots.map((slot) => ({
+      ...slot,
+      building:
+        slot.building ||
+        (slot.buildingId
+          ? legacyBuildingMap.get(String(slot.buildingId)) || null
+          : null),
+    }));
+
+    naturalSortBySlotNumber(enrichedSlots);
+
+    res.status(200).json({
+      count: enrichedSlots.length,
+      slots: enrichedSlots,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
