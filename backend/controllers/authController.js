@@ -43,6 +43,10 @@ const registerUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        address: user.address || "",
+        coordinates: user.coordinates || "",
+        phone: user.phone || "",
+        ownerCode: user.ownerCode || `OWNER-${user._id.toString().slice(-6).toUpperCase()}`
       },
     });
 
@@ -91,6 +95,10 @@ const loginUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        address: user.address || "",
+        coordinates: user.coordinates || "",
+        phone: user.phone || "",
+        ownerCode: user.ownerCode || `OWNER-${user._id.toString().slice(-6).toUpperCase()}`
       },
     });
 
@@ -102,14 +110,64 @@ const loginUser = async (req, res) => {
 };
 
 const getProfile = async (req, res) => {
+  const user = req.user;
   res.status(200).json({
     message: "Profile fetched successfully",
-    user: req.user,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      address: user.address || "",
+      coordinates: user.coordinates || "",
+      phone: user.phone || "",
+      ownerCode: user.ownerCode || `OWNER-${user._id.toString().slice(-6).toUpperCase()}`
+    },
   });
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const { address, coordinates, phone, ownerCode } = req.body;
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
+    }
+
+    if (address !== undefined) user.address = address;
+    if (coordinates !== undefined) user.coordinates = coordinates;
+    if (phone !== undefined) user.phone = phone;
+    if (ownerCode !== undefined) user.ownerCode = ownerCode;
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Profile updated successfully.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        address: user.address || "",
+        coordinates: user.coordinates || "",
+        phone: user.phone || "",
+        ownerCode: user.ownerCode || `OWNER-${user._id.toString().slice(-6).toUpperCase()}`
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
 };
 
 module.exports = {
   registerUser,
   loginUser,
   getProfile,
+  updateProfile,
 };

@@ -136,7 +136,69 @@ router.get("/dashboard-summary", protect, async (req, res) => {
       });
     }
 
-    // Fallback for owner and admin
+    if (req.user.role === "owner") {
+      // 1. Fetch buildings owned by this owner
+      const buildings = await db.collection("buildings").find({ ownerId: userId }).toArray();
+      const buildingIds = buildings.map((b) => b._id);
+
+      // 2. Fetch slots in these buildings
+      const slots = await db.collection("parkingslots").find({ buildingId: { $in: buildingIds } }).toArray();
+      const slotIds = slots.map((s) => s._id);
+
+      // 3. Fetch bookings for these slots
+      const bookings = await db.collection("bookings").find({ slotId: { $in: slotIds } }).toArray();
+      const bookingIds = bookings.map((b) => b._id);
+
+      // 4. Fetch reviews for these bookings
+      const reviews = await db.collection("reviews").find({ bookingId: { $in: bookingIds } }).toArray();
+
+      // 5. Calculate average rating
+      const avgRating = reviews.length > 0
+        ? (reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviews.length).toFixed(1)
+        : "N/A";
+
+      // 6. Calculate total earned from successful payments
+      const payments = await db.collection("payments").find({
+        bookingId: { $in: bookingIds },
+        status: "success"
+      }).toArray();
+      const totalEarned = payments.reduce((acc, pay) => acc + pay.amount, 0);
+
+      // 7. Get user profile data to return
+      const userDoc = await db.collection("users").findOne({ _id: userId });
+
+      // 8. Fetch the actual reviews details (limit 3) for owner reviews feed
+      const recentReviews = [];
+      const sortedReviews = [...reviews].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      for (const rev of sortedReviews.slice(0, 3)) {
+        const b = bookings.find(b => b._id.toString() === rev.bookingId.toString());
+        const s = b ? slots.find(s => s._id.toString() === b.slotId.toString()) : null;
+        recentReviews.push({
+          rating: rev.rating,
+          comment: rev.comment,
+          createdAt: rev.createdAt,
+          slotNumber: s ? s.slotNumber : "Unknown"
+        });
+      }
+
+      return res.json({
+        role: "owner",
+        avgRating,
+        totalBuildings: buildings.length,
+        totalSlots: slots.length,
+        totalBookings: bookings.length,
+        totalEarned,
+        recentReviews,
+        profile: {
+          address: userDoc.address || "",
+          coordinates: userDoc.coordinates || "",
+          phone: userDoc.phone || "",
+          ownerCode: userDoc.ownerCode || `OWNER-${userId.toString().slice(-6).toUpperCase()}`
+        }
+      });
+    }
+
+    // Fallback for admin
     return res.json({
       role: req.user.role,
       message: `${req.user.role.charAt(0).toUpperCase() + req.user.role.slice(1)} dashboard features coming soon.`

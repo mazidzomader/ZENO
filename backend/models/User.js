@@ -27,6 +27,26 @@ const userSchema = new mongoose.Schema(
       enum: ["admin", "owner", "renter"],
       default: "renter",
     },
+
+    address: {
+      type: String,
+      default: "",
+    },
+
+    coordinates: {
+      type: String,
+      default: "",
+    },
+
+    phone: {
+      type: String,
+      default: "",
+    },
+
+    ownerCode: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,
