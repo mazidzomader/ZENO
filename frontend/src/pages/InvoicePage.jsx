@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import API from "../services/api";
-import { ArrowLeft, Printer, Receipt, AlertTriangle, Loader } from "lucide-react";
+import { ArrowLeft, Printer, Receipt, AlertTriangle, Loader, RefreshCw } from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -210,18 +210,22 @@ export function InvoiceView() {
 
   const handlePrint = useReactToPrint({ contentRef: printRef });
 
+  const fetchInv = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await API.get(`/invoices/${id}`);
+      setInv(res.data);
+      document.title = `Invoice ${res.data.invoiceNumber} · ZENO`;
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await API.get(`/invoices/${id}`);
-        setInv(res.data);
-        document.title = `Invoice ${res.data.invoiceNumber} · ZENO`;
-      } catch (err) {
-        setError(err.response?.data?.error || err.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    fetchInv();
     return () => { document.title = "ZENO"; };
   }, [id]);
 
@@ -241,15 +245,26 @@ export function InvoiceView() {
             Invoice {inv ? `// ${inv.invoiceNumber}` : ""}
           </h1>
         </div>
-        {inv && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 border-2 border-ink bg-ink text-bgBase font-mono text-xs font-bold uppercase tracking-wider hover:bg-highlight hover:border-highlight hover:text-ink transition-colors"
+            onClick={fetchInv}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-1.5 border-2 border-ink bg-bgBase font-mono text-xs font-bold uppercase tracking-wider text-ink hover:bg-highlight hover:text-bgBase transition-colors disabled:opacity-50"
+            aria-label="Refresh invoice"
           >
-            <Printer className="w-3.5 h-3.5" />
-            Print Invoice
+            <RefreshCw className={`w-3.5 h-3.5 stroke-[2.5] ${loading ? "animate-spin" : ""}`} />
+            Sync State
           </button>
-        )}
+          {inv && (
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 border-2 border-ink bg-ink text-bgBase font-mono text-xs font-bold uppercase tracking-wider hover:bg-highlight hover:border-highlight hover:text-ink transition-colors"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Print Invoice
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Loading */}
@@ -287,18 +302,22 @@ export function InvoiceList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const fetchInvoices = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await API.get("/invoices");
+      setInvoices(res.data);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     document.title = "Invoices · ZENO";
-    (async () => {
-      try {
-        const res = await API.get("/invoices");
-        setInvoices(res.data);
-      } catch (err) {
-        setError(err.response?.data?.error || err.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    fetchInvoices();
     return () => { document.title = "ZENO"; };
   }, []);
 
@@ -324,7 +343,15 @@ export function InvoiceList() {
             Invoice records · [{invoices.length} TOTAL]
           </p>
         </div>
-        <Receipt className="w-7 h-7 stroke-[2] text-inkMuted" />
+        <button
+          onClick={fetchInvoices}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-1.5 border-2 border-ink bg-bgBase font-mono text-xs font-bold uppercase tracking-wider text-ink hover:bg-highlight hover:text-bgBase transition-colors focus:outline-none disabled:opacity-50"
+          aria-label="Refresh invoice list"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 stroke-[2.5] ${loading ? "animate-spin" : ""}`} />
+          Sync State
+        </button>
       </div>
 
       {/* Loading */}
