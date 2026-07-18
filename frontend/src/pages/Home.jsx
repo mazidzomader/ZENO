@@ -275,7 +275,7 @@ function Home() {
 
             <div className="mt-12 flex items-center space-x-4">
               <a
-                href="#auth"
+                href="/slots/browse"
                 className="border-2 border-ink bg-transparent text-ink px-8 py-4 font-mono font-bold uppercase tracking-widest hover:bg-ink hover:text-bgBase flex items-center group"
               >
                 Find a Space

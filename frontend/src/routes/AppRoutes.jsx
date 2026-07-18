@@ -1,3 +1,4 @@
+import BrowseSlots from "../pages/slots/BrowseSlots";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import Home from "../pages/Home";
@@ -32,6 +33,9 @@ function AppRoutes() {
     <Routes>
       {/* Public Pages */}
       <Route path="/" element={<Home />} />
+      
+      {/* Feature 01 — Listing and Browsing */}
+      <Route path="/slots/browse" element={<BrowseSlots />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
