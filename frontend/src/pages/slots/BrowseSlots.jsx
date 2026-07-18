@@ -2,6 +2,30 @@ import { useEffect, useMemo, useState } from "react";
 import API from "../../services/api";
 import Layout from "../../components/Layout";
 
+
+function formatDimensions(dimensions) {
+  if (!dimensions) return "—";
+
+  if (typeof dimensions === "string") {
+    return dimensions;
+  }
+
+  if (typeof dimensions === "object") {
+    const { length, width } = dimensions;
+
+    if (length !== undefined && width !== undefined) {
+      const addUnit = (value) => {
+        const text = String(value);
+        return text.toLowerCase().includes("m") ? text : `${text}m`;
+      };
+
+      return `${addUnit(length)} × ${addUnit(width)}`;
+    }
+  }
+
+  return "—";
+}
+
 function getBuildingDetails(slot) {
   const building = slot.building || slot.buildingId;
 
@@ -327,7 +351,7 @@ function BrowseSlots() {
                           Dimensions
                         </dt>
                         <dd className="mt-1 font-bold">
-                          {slot.dimensions || "—"}
+                          {formatDimensions(slot.dimensions)}
                         </dd>
                       </div>
                     </dl>
