@@ -84,7 +84,7 @@ export function DatabaseCollectionView() {
             {getTitle()}
           </h1>
           <p className="font-mono text-xs text-inkMuted mt-1 uppercase">
-            LIVE SCHEMALESS VIEW // MONGO_DB://{collectionName} // [{data.length} RECORDS]
+            [{data.length} RECORDS]
           </p>
         </div>
         <button
@@ -108,14 +108,14 @@ export function DatabaseCollectionView() {
       {/* Error state */}
       {!loading && error && (
         <div className="border-2 border-alert bg-alert/10 p-4 font-mono text-xs text-alert font-bold uppercase">
-          ERROR // {error}
+          ERROR || {error}
         </div>
       )}
 
       {/* Empty collection table placeholder */}
       {!loading && !error && data.length === 0 && (
         <div className="border-2 border-ink border-dashed p-12 text-center bg-bgAlt/5 font-mono text-xs text-inkMuted uppercase tracking-widest">
-          [EMPTY_TABLE // NO RECORDS RECOVERED IN THIS COLLECTION]
+          [EMPTY_TABLE || NO RECORDS RECOVERED IN THIS COLLECTION]
         </div>
       )}
 

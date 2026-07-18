@@ -264,7 +264,7 @@ export function InvoiceView() {
       {!loading && error && (
         <div className="border-2 border-alert bg-alert/10 p-6 font-mono text-xs text-alert font-bold uppercase flex items-center gap-3">
           <AlertTriangle className="w-4 h-4" />
-          ERROR // {error}
+          ERROR || {error}
         </div>
       )}
 
@@ -338,14 +338,14 @@ export function InvoiceList() {
       {!loading && error && (
         <div className="border-2 border-alert bg-alert/10 p-4 font-mono text-xs text-alert font-bold uppercase flex items-center gap-3">
           <AlertTriangle className="w-4 h-4" />
-          ERROR // {error}
+          ERROR || {error}
         </div>
       )}
 
       {/* Empty */}
       {!loading && !error && invoices.length === 0 && (
         <div className="border-2 border-dashed border-ink p-16 text-center font-mono text-xs text-inkMuted uppercase tracking-widest">
-          [EMPTY // NO INVOICES FOUND]
+          [EMPTY || NO INVOICES FOUND]
         </div>
       )}
 

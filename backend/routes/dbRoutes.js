@@ -20,8 +20,37 @@ const { protect } = require("../middleware/authMiddleware");
  *   Read-only / public: parkingslots, buildings, subscriptionplans, reports
  */
 const buildFilter = async (collectionName, user, db) => {
-  // Admins and owners see everything
-  if (user.role === "admin" || user.role === "owner") {
+  // Admins see everything
+  if (user.role === "admin") {
+    return {};
+  }
+
+  // Owners see everything except reviews which are scoped to their slots
+  if (user.role === "owner") {
+    if (collectionName === "reviews") {
+      const buildings = await db
+        .collection("buildings")
+        .find({ ownerId: user._id }, { projection: { _id: 1 } })
+        .toArray();
+
+      const slots = await db
+        .collection("parkingslots")
+        .find(
+          { buildingId: { $in: buildings.map((b) => b._id) } },
+          { projection: { _id: 1 } }
+        )
+        .toArray();
+
+      const bookings = await db
+        .collection("bookings")
+        .find(
+          { slotId: { $in: slots.map((s) => s._id) } },
+          { projection: { _id: 1 } }
+        )
+        .toArray();
+
+      return { bookingId: { $in: bookings.map((b) => b._id) } };
+    }
     return {};
   }
 
