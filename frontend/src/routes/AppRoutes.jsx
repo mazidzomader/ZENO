@@ -20,6 +20,10 @@ import PricingRuleForm from "../pages/pricing/PricingRuleForm";
 // Feature 20 — Reports & Export
 import Reports from "../pages/Reports";
 
+// Feature 14 — Renter Profile & Vehicles
+import VehicleManagement from "../pages/VehicleManagement";
+//import ProtectedRoute from "../components/ProtectedRoute";
+
 // Feature — Invoice Generation
 import { InvoiceList, InvoiceView } from "../pages/InvoicePage";
 
@@ -66,7 +70,10 @@ function AppRoutes() {
         <Route path="/pricing-rules/new" element={<PricingRuleForm />} />
         <Route path="/pricing-rules/:id/edit" element={<PricingRuleForm />} />
         
-        
+        {/* Feature 14 — Renter Profile & Vehicle Management */}
+        <Route path="/profile/vehicles" element={<VehicleManagement />} />
+        <Route path="/collections/vehicles" element={<VehicleManagement />} />
+
       </Route>
 
       {/* Fallback Catch-All */}
