@@ -1,5 +1,6 @@
 import BrowseSlots from "../pages/slots/BrowseSlots";
 import { Routes, Route, Navigate } from "react-router-dom";
+import BookingHistory from "../pages/bookings/BookingHistory";
 
 import Home from "../pages/Home";
 import Login from "../pages/Login";
@@ -45,6 +46,8 @@ function AppRoutes() {
         <Route path="/collections/reports" element={<Reports />} />
         {/* Shortcut: If someone types just /reports, safely redirect them to the dashboard version added by real developer*/}
         <Route path="/reports" element={<Navigate to="/collections/reports" replace />} />
+        {/* Feature 06 — Booking History */}
+        <Route path="/bookings/history" element={<BookingHistory />} />
 
         {/* Dynamic catch for every single database table query */}
         <Route path="/collections/:collectionName" element={<DatabaseCollectionView />} />
