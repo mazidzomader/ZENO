@@ -114,7 +114,7 @@ function writePdf(filename, title, rows) {
   doc.fontSize(14).text(title);
   doc.moveDown(1);
 
-if (!rows.length) {
+  if (!rows.length) {
     doc.fontSize(11).text("NO_DATA_IN_RANGE");
   } else {
     const headers = Object.keys(rows[0]);
@@ -122,17 +122,36 @@ if (!rows.length) {
 
     doc.fontSize(9).font("Helvetica-Bold");
     
-    const startY = doc.y;
-    // vvv Look here! Change doc.y to startY
-    headers.forEach((h, i) => doc.text(h, 40 + i * colWidth, startY, { width: colWidth }));
+    let startY = doc.y;
+    let maxRowY = startY;
+
+    // 1. Draw Headers Safely
+    headers.forEach((h, i) => {
+      // { width: colWidth - 10 } enforces a 10px margin so text never touches horizontally
+      doc.text(h, 40 + i * colWidth, startY, { width: colWidth - 10 });
+      if (doc.y > maxRowY) maxRowY = doc.y;
+    });
     
-    doc.moveDown(0.5);
+    doc.y = maxRowY + 12; // Move down based on the tallest header
     doc.font("Helvetica");
 
+    // 2. Draw Rows Safely
     rows.forEach(row => {
-      const y = doc.y;
-      headers.forEach((h, i) => doc.text(String(row[h] ?? ""), 40 + i * colWidth, y, { width: colWidth }));
-      doc.moveDown(0.3);
+      // 3. Prevent text from falling off the bottom of the page
+      if (doc.y > doc.page.height - 80) {
+        doc.addPage();
+        doc.y = 40; // Reset cursor to top of new page
+      }
+
+      let currentY = doc.y;
+      let maxColY = currentY;
+
+      headers.forEach((h, i) => {
+        doc.text(String(row[h] ?? ""), 40 + i * colWidth, currentY, { width: colWidth - 10 });
+        if (doc.y > maxColY) maxColY = doc.y; // Find which column in this row is the tallest
+      });
+      
+      doc.y = maxColY + 8; // Move cursor past the tallest column + gap for the next row
     });
   }
 
