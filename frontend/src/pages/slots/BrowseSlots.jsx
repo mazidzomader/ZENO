@@ -351,7 +351,7 @@ function BrowseSlots() {
                           Dimensions
                         </dt>
                         <dd className="mt-1 font-bold">
-                          {formatDimensions(slot.dimensions)}
+                          {slot.dimensions && typeof slot.dimensions === "object"? `${slot.dimensions.length ?? "—"} × ${ slot.dimensions.width ?? "—"}`: slot.dimensions || "—"}
                         </dd>
                       </div>
                     </dl>
