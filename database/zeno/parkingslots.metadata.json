@@ -1,1 +1,0 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"building":{"$numberInt":"1"},"slotNumber":{"$numberInt":"1"}},"name":"building_1_slotNumber_1","unique":true}],"uuid":"a379100d4d9f456d920858feab116937","collectionName":"parkingslots","type":"collection"}

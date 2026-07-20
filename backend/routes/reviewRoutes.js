@@ -16,27 +16,42 @@ router.get("/bookings", protect, async (req, res) => {
     const userId = toId(req.user._id);
 
     // Fetch all bookings for the logged-in renter
+    // Use $or to handle renterId stored as ObjectId or string (type resilience)
+    const userIdStr = String(req.user._id);
     const bookings = await db
       .collection("bookings")
-      .find({ renterId: userId })
+      .find({ $or: [{ renterId: userId }, { renterId: userIdStr }] })
       .sort({ startTime: -1 })
       .toArray();
 
     // Map and populate slot, building, and review data for each booking
     const result = await Promise.all(
       bookings.map(async (bk) => {
-        // Fetch review if exists
-        const review = await db.collection("reviews").findOne({ bookingId: bk._id });
+        // Fetch review if exists — try ObjectId match first, then string fallback
+        let review = await db.collection("reviews").findOne({ bookingId: bk._id });
+        if (!review) {
+          review = await db.collection("reviews").findOne({
+            bookingId: toId(String(bk._id)),
+          });
+        }
 
-        // Fetch parking slot details
-        const slot = bk.slotId
-          ? await db.collection("parkingslots").findOne({ _id: bk.slotId })
-          : null;
+        // Fetch parking slot details — try ObjectId then string fallback
+        let slot = null;
+        if (bk.slotId) {
+          slot = await db.collection("parkingslots").findOne({
+            $or: [{ _id: bk.slotId }, { _id: toId(String(bk.slotId)) }],
+          });
+        }
 
-        // Fetch building details
-        const building = slot?.buildingId
-          ? await db.collection("buildings").findOne({ _id: slot.buildingId })
-          : null;
+        // Fetch building details — field may be 'building' OR 'buildingId' depending on
+        // how the slot was created (old seed uses buildingId, new data uses building).
+        let building = null;
+        const buildingRef = slot?.building ?? slot?.buildingId ?? null;
+        if (buildingRef) {
+          building = await db.collection("buildings").findOne({
+            $or: [{ _id: buildingRef }, { _id: toId(String(buildingRef)) }],
+          });
+        }
 
         return {
           _id: bk._id,

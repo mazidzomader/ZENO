@@ -228,32 +228,50 @@ router.get("/:id", protect, async (req, res) => {
       return res.status(403).json({ error: "Access denied." });
     }
 
-    // Parallel lookups for top-level refs
+    // Parallel lookups for top-level refs — use $or for ObjectId/string resilience
+    const tryId = (id) => {
+      try { return toId(String(id)); } catch { return null; }
+    };
+
     const [renter, payment, booking] = await Promise.all([
       inv.renterId
-        ? db
-            .collection("users")
-            .findOne({ _id: inv.renterId }, { projection: { password: 0, __v: 0 } })
+        ? db.collection("users").findOne(
+            { $or: [{ _id: inv.renterId }, { _id: tryId(inv.renterId) }] },
+            { projection: { password: 0, __v: 0 } }
+          )
         : null,
       inv.paymentId
-        ? db.collection("payments").findOne({ _id: inv.paymentId })
+        ? db.collection("payments").findOne(
+            { $or: [{ _id: inv.paymentId }, { _id: tryId(inv.paymentId) }] }
+          )
         : null,
       inv.bookingId
-        ? db.collection("bookings").findOne({ _id: inv.bookingId })
+        ? db.collection("bookings").findOne(
+            { $or: [{ _id: inv.bookingId }, { _id: tryId(inv.bookingId) }] }
+          )
         : null,
     ]);
 
-    // Second-level lookups depend on booking
-    const [slot, vehicle] = booking
-      ? await Promise.all([
-          db.collection("parkingslots").findOne({ _id: booking.slotId }),
-          db.collection("vehicles").findOne({ renterId: inv.renterId }),
-        ])
-      : [null, null];
+    // Second-level lookups depend on booking — slot field is 'slotId' on bookings
+    const slot = booking?.slotId
+      ? await db.collection("parkingslots").findOne(
+          { $or: [{ _id: booking.slotId }, { _id: tryId(booking.slotId) }] }
+        )
+      : null;
 
-    // Building depends on slot
-    const building = slot
-      ? await db.collection("buildings").findOne({ _id: slot.buildingId })
+    const vehicle = booking
+      ? await db.collection("vehicles").findOne(
+          { $or: [{ renterId: inv.renterId }, { renterId: tryId(inv.renterId) }] }
+        )
+      : null;
+
+    // Building depends on slot — field may be 'building' OR 'buildingId' depending on
+    // how the slot was created (old seed uses buildingId, new data uses building).
+    const buildingRef = slot?.building ?? slot?.buildingId ?? null;
+    const building = buildingRef
+      ? await db.collection("buildings").findOne(
+          { $or: [{ _id: buildingRef }, { _id: tryId(String(buildingRef)) }] }
+        )
       : null;
 
     // Owner can only view invoices that belong to their buildings
