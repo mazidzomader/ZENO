@@ -27,7 +27,7 @@ export const sidebarItems = [
     id: "bookings",
     title: "Bookings",
     icon: "Calendar",
-    path: "/collections/bookings"
+    path: "/bookings/history"
   },
   {
     id: "checkinouts",
