@@ -10,6 +10,7 @@ const buildingRoutes = require("./routes/buildingRoutes");
 const pricingRuleRoutes = require("./routes/pricingRuleRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const invoiceRoutes = require("./routes/invoiceRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const vehicleRoutes = require("./routes/vehicleRoutes");
 
@@ -29,6 +30,7 @@ app.use("/api/buildings", buildingRoutes);
 app.use("/api/pricing-rules", pricingRuleRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/vehicles", vehicleRoutes);
 

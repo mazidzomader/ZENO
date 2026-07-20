@@ -46,7 +46,7 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      const res = await API.get("/invoices/dashboard-summary");
+      const res = await API.get("/dashboard/summary");
       setSummary(res.data);
       if (res.data.role === "owner" && res.data.profile) {
         setFormData({
