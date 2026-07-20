@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 
 // Auth Middleware
-function verifyToken(req, res, next) {
+async function verifyToken(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
 
@@ -13,7 +13,19 @@ function verifyToken(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Contains { id, role }
+    req.user = decoded; 
+
+    // Fetch role from DB if teammate's token doesn't include it
+    if (!req.user.role) {
+      const userId = req.user.id || req.user._id || req.user.userId;
+      if (userId) {
+        const dbUser = await User.findById(userId);
+        if (dbUser) {
+          req.user.role = dbUser.role;
+          req.user.id = dbUser._id;
+        }
+      }
+    }
     next();
   } catch (err) {
     return res.status(401).json({ error: "INVALID_TOKEN" });
@@ -103,7 +115,7 @@ router.get("/", verifyToken, async (req, res) => {
   }
 });
 
-// GET /api/vehicles/building -> Owner-only: Every vehicle booked into owner's buildings
+// GET /api/vehicles/building -> owner-only
 router.get("/building", verifyToken, requireRole("owner"), async (req, res) => {
   try {
     const ownerId = req.user.id || req.user._id;
@@ -111,7 +123,10 @@ router.get("/building", verifyToken, requireRole("owner"), async (req, res) => {
     const buildings = await Building.find({ ownerId }).select("_id");
     const buildingIds = buildings.map((b) => b._id);
 
-    const slots = await ParkingSlot.find({ buildingId: { $in: buildingIds } }).select("_id");
+    // Support both 'buildingId' and 'building' based on teammate's schema
+    const slots = await ParkingSlot.find({ 
+      $or: [ { buildingId: { $in: buildingIds } }, { building: { $in: buildingIds } } ]
+    }).select("_id");
     const slotIds = slots.map((s) => s._id);
 
     const bookings = await Booking.find({ slotId: { $in: slotIds } }).select("vehicleId");
@@ -123,7 +138,6 @@ router.get("/building", verifyToken, requireRole("owner"), async (req, res) => {
 
     return res.json(vehicles);
   } catch (err) {
-    console.error(err);
     return res.status(500).json({ error: "SERVER_ERROR" });
   }
 });
