@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
+import Layout from "../components/Layout";
+import { useAuth } from "../context/AuthContext"; // 1. Imported your Auth context
 import "./reports.css";
 
-// point this at your Express backend
 const API_BASE = "http://localhost:5000";
 
 const TYPE_LABEL = {
@@ -87,6 +88,8 @@ function SegmentedControl({ options, value, onChange }) {
 }
 
 export default function Reports() {
+  const { user } = useAuth(); // 2. Grab the logged-in user
+
   const [reportType, setReportType] = useState("revenue");
   const [format, setFormat] = useState("csv");
   const [dateFrom, setDateFrom] = useState("2026-07-01");
@@ -94,12 +97,13 @@ export default function Reports() {
   const [buildingId, setBuildingId] = useState("all");
 
   const [reports, setReports] = useState([]);
-  const [logState, setLogState] = useState("loading"); // loading | ok | unreachable
+  const [logState, setLogState] = useState("loading");
   const [generating, setGenerating] = useState(false);
 
   const refreshReportLog = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/reports`);
+      // 3. Added cache: "no-store" so the browser doesn't hide fresh updates
+      const res = await fetch(`${API_BASE}/api/reports`, { cache: "no-store" });
       if (!res.ok) throw new Error("bad status " + res.status);
       const data = await res.json();
       setReports(data);
@@ -120,16 +124,27 @@ export default function Reports() {
     e.preventDefault();
     setGenerating(true);
     try {
+      // 4. Injected the user ID directly into the form payload
+      const payload = { 
+        type: reportType, 
+        format, 
+        dateFrom, 
+        dateTo, 
+        buildingId,
+        generatedBy: user?.id || user?._id || null 
+      };
+
       const res = await fetch(`${API_BASE}/api/reports/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: reportType, format, dateFrom, dateTo, buildingId })
+        body: JSON.stringify(payload)
       });
+
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "GENERATE_FAILED");
       }
-      await refreshReportLog();
+      await refreshReportLog(); // Will now fetch fresh data due to no-store!
     } catch (err) {
       alert("REPORT_GENERATION_FAILED: " + err.message);
     } finally {
@@ -138,137 +153,129 @@ export default function Reports() {
   }
 
   return (
-    <div className="report-page-container">
-      {/* 
-        Note: The global <header> was removed here because it's managed 
-        by DashboardLayout. If you still want a localized inner top sub-bar, 
-        you can safely keep it here with a custom class like "report-topbar".
-      */}
+    <Layout>
+      <div className="report-page-container">
+        <div className="body-split">
+          <aside className="report-side-panel">
+            <h1 className="panel-title">GENERATE_REPORT</h1>
+            <p className="panel-sub">
+              Compile revenue, booking volume, or occupancy data into an exportable file.
+            </p>
 
-      <div className="body-split">
-        {/* Changed class here to avoid colliding with main system sidebar layout */}
-        <aside className="report-side-panel">
-          <h1 className="panel-title">GENERATE_REPORT</h1>
-          <p className="panel-sub">
-            Compile revenue, booking volume, or occupancy data into an exportable file.
-          </p>
-
-          <form className="form-block" onSubmit={handleSubmit}>
-
-            <div className="field-group">
-              <label className="field-label">REPORT_TYPE</label>
-              <SegmentedControl
-                value={reportType}
-                onChange={setReportType}
-                options={[
-                  { value: "revenue", label: "REVENUE" },
-                  { value: "booking_volume", label: "BOOKINGS" },
-                  { value: "occupancy", label: "OCCUPANCY" }
-                ]}
-              />
-            </div>
-
-            <div className="field-group split-2">
-              <div>
-                <label className="field-label" htmlFor="date-from">DATE_FROM</label>
-                <input
-                  type="date"
-                  id="date-from"
-                  className="field-input"
-                  value={dateFrom}
-                  onChange={e => setDateFrom(e.target.value)}
+            <form className="form-block" onSubmit={handleSubmit}>
+              <div className="field-group">
+                <label className="field-label">REPORT_TYPE</label>
+                <SegmentedControl
+                  value={reportType}
+                  onChange={setReportType}
+                  options={[
+                    { value: "revenue", label: "REVENUE" },
+                    { value: "booking_volume", label: "BOOKINGS" },
+                    { value: "occupancy", label: "OCCUPANCY" }
+                  ]}
                 />
               </div>
-              <div>
-                <label className="field-label" htmlFor="date-to">DATE_TO</label>
-                <input
-                  type="date"
-                  id="date-to"
+
+              <div className="field-group split-2">
+                <div>
+                  <label className="field-label" htmlFor="date-from">DATE_FROM</label>
+                  <input
+                    type="date"
+                    id="date-from"
+                    className="field-input"
+                    value={dateFrom}
+                    onChange={e => setDateFrom(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="date-to">DATE_TO</label>
+                  <input
+                    type="date"
+                    id="date-to"
+                    className="field-input"
+                    value={dateTo}
+                    onChange={e => setDateTo(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="field-group">
+                <label className="field-label" htmlFor="building-select">BUILDING</label>
+                <select
+                  id="building-select"
                   className="field-input"
-                  value={dateTo}
-                  onChange={e => setDateTo(e.target.value)}
+                  value={buildingId}
+                  onChange={e => setBuildingId(e.target.value)}
+                >
+                  <option value="all">ALL_BUILDINGS</option>
+                </select>
+              </div>
+
+              <div className="field-group">
+                <label className="field-label">EXPORT_FORMAT</label>
+                <SegmentedControl
+                  value={format}
+                  onChange={setFormat}
+                  options={[
+                    { value: "csv", label: "CSV" },
+                    { value: "pdf", label: "PDF" }
+                  ]}
                 />
               </div>
+
+              <button type="submit" className="btn-generate" disabled={generating}>
+                <span>{generating ? "RUNNING\u2026" : "RUN_REPORT"}</span>
+                <span className="btn-arrow">&rarr;</span>
+              </button>
+            </form>
+
+            <div className="sidebar-footnote">
+              <span className="dot dot-idle"></span>
+              Reports write to <span className="mono-em">/generated_reports</span> and remain listed until removed.
+            </div>
+          </aside>
+
+          <main className="content">
+            <div className="content-header">
+              <h2 className="content-title">REPORT_LOG</h2>
+              <span className="content-count">
+                {String(reports.length).padStart(2, "0")} RECORDS
+              </span>
             </div>
 
-            <div className="field-group">
-              <label className="field-label" htmlFor="building-select">BUILDING</label>
-              <select
-                id="building-select"
-                className="field-input"
-                value={buildingId}
-                onChange={e => setBuildingId(e.target.value)}
-              >
-                <option value="all">ALL_BUILDINGS</option>
-              </select>
-            </div>
-
-            <div className="field-group">
-              <label className="field-label">EXPORT_FORMAT</label>
-              <SegmentedControl
-                value={format}
-                onChange={setFormat}
-                options={[
-                  { value: "csv", label: "CSV" },
-                  { value: "pdf", label: "PDF" }
-                ]}
-              />
-            </div>
-
-            <button type="submit" className="btn-generate" disabled={generating}>
-              <span>{generating ? "RUNNING\u2026" : "RUN_REPORT"}</span>
-              <span className="btn-arrow">&rarr;</span>
-            </button>
-          </form>
-
-          <div className="sidebar-footnote">
-            <span className="dot dot-idle"></span>
-            Reports write to <span className="mono-em">/generated_reports</span> and remain listed until removed.
-          </div>
-        </aside>
-
-        <main className="content">
-          <div className="content-header">
-            <h2 className="content-title">REPORT_LOG</h2>
-            <span className="content-count">
-              {String(reports.length).padStart(2, "0")} RECORDS
-            </span>
-          </div>
-
-          <table className="report-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>TYPE</th>
-                <th>RANGE</th>
-                <th>BUILDING</th>
-                <th>FORMAT</th>
-                <th>GENERATED_AT</th>
-                <th>STATUS</th>
-                <th>ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logState === "loading" && (
-                <tr><td className="mono" colSpan={8}>LOADING_REPORT_LOG&hellip;</td></tr>
-              )}
-              {logState === "unreachable" && (
+            <table className="report-table">
+              <thead>
                 <tr>
-                  <td className="mono" colSpan={8}>
-                    CANNOT_REACH_BACKEND &mdash; is it running at {API_BASE}?
-                  </td>
+                  <th>ID</th>
+                  <th>TYPE</th>
+                  <th>RANGE</th>
+                  <th>BUILDING</th>
+                  <th>FORMAT</th>
+                  <th>GENERATED_AT</th>
+                  <th>STATUS</th>
+                  <th>ACTION</th>
                 </tr>
-              )}
-              {logState === "ok" && reports.length === 0 && (
-                <tr><td className="mono" colSpan={8}>NO_REPORTS_YET</td></tr>
-              )}
-              {logState === "ok" && reports.map(r => <ReportRow key={r._id} report={r} />)}
-            </tbody>
-          </table>
-        </main>
-
+              </thead>
+              <tbody>
+                {logState === "loading" && (
+                  <tr><td className="mono" colSpan={8}>LOADING_REPORT_LOG&hellip;</td></tr>
+                )}
+                {logState === "unreachable" && (
+                  <tr>
+                    <td className="mono" colSpan={8}>
+                      CANNOT_REACH_BACKEND &mdash; is it running at {API_BASE}?
+                    </td>
+                  </tr>
+                )}
+                {logState === "ok" && reports.length === 0 && (
+                  <tr><td className="mono" colSpan={8}>NO_REPORTS_YET</td></tr>
+                )}
+                {logState === "ok" && reports.map(r => <ReportRow key={r._id} report={r} />)}
+              </tbody>
+            </table>
+          </main>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }
-
