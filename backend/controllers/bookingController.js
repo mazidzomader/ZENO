@@ -175,6 +175,12 @@ const getMyBookingHistory = async (req, res) => {
     }
 
     const bookings = await Booking.find(filter)
+      .populate({
+        path: "slotId",
+        populate: {
+          path: "building"
+        }
+      })
       .sort({
         startTime: -1,
         createdAt: -1,

@@ -10,7 +10,7 @@ const bookingSchema = new mongoose.Schema(
 
     slotId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ParkingSlot",
+      ref: "Slot",
       index: true,
     },
 

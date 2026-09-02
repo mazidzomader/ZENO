@@ -30,6 +30,12 @@ export const sidebarItems = [
     path: "/bookings/history"
   },
   {
+    id: "navigation",
+    title: "Navigation",
+    icon: "Map",
+    path: "/navigation"
+  },
+  {
     id: "checkinouts",
     title: "Check-in/outs",
     icon: "ClipboardCheck",
