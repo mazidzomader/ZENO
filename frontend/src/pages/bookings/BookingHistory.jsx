@@ -27,6 +27,8 @@ function BookingHistory() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [cancellingId, setCancellingId] = useState(null);
+  const [actionError, setActionError] = useState("");
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -76,6 +78,22 @@ function BookingHistory() {
     setStatus("all");
     setFromDate("");
     setToDate("");
+  };
+
+  const handleCancel = async (bookingId) => {
+    if (!window.confirm("Cancel this booking? The slot will become available again.")) {
+      return;
+    }
+    setActionError("");
+    setCancellingId(bookingId);
+    try {
+      await API.patch(`/bookings/${bookingId}/cancel`);
+      fetchBookings();
+    } catch (err) {
+      setActionError(err.response?.data?.message || "Failed to cancel booking.");
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   return (
@@ -179,6 +197,12 @@ function BookingHistory() {
           </div>
         )}
 
+        {actionError && (
+          <div className="mt-5 border-2 border-red-700 p-3 font-mono text-xs font-bold uppercase text-red-700">
+            {actionError}
+          </div>
+        )}
+
         {!loading && !error && bookings.length === 0 && (
           <div className="mt-5 border-2 border-dashed border-black p-10 text-center">
             <p className="font-mono text-sm font-bold uppercase">
@@ -203,6 +227,7 @@ function BookingHistory() {
                   <th className="p-3">End</th>
                   <th className="p-3">Status</th>
                   <th className="p-3">Total</th>
+                  <th className="p-3">Actions</th>
                 </tr>
               </thead>
 
@@ -235,6 +260,21 @@ function BookingHistory() {
                     <td className="p-3 font-bold">
                       {formatAmount(booking.totalAmount)}
                     </td>
+
+                    <td className="p-3">
+                      {booking.status === "confirmed" ? (
+                        <button
+                          type="button"
+                          onClick={() => handleCancel(booking._id)}
+                          disabled={cancellingId === booking._id}
+                          className="border-2 border-red-700 px-3 py-1 font-bold uppercase text-red-700 hover:bg-red-700 hover:text-white disabled:opacity-60"
+                        >
+                          {cancellingId === booking._id ? "..." : "Cancel"}
+                        </button>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -247,4 +287,3 @@ function BookingHistory() {
 }
 
 export default BookingHistory;
-
