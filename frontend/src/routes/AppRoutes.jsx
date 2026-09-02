@@ -9,7 +9,8 @@ import Register from "../pages/Register";
 // Layout & Dynamic Database View
 import DashboardLayout from "../layouts/DashboardLayout";
 import { DatabaseCollectionView } from "../pages/DatabaseCollectionView";
-
+//building, parking slots view
+import { CollectionGridView } from "../pages/collections/CollectionGridView";
 // Feature 13 — Slot CRUD
 import MySlots from "../pages/slots/MySlots";
 import SlotForm from "../pages/slots/SlotForm";
@@ -53,6 +54,8 @@ function AppRoutes() {
         {/* Feature 06 — Booking History */}
         <Route path="/bookings/history" element={<BookingHistory />} />
 
+        <Route path="/collections/buildings" element={<CollectionGridView collectionName="buildings" />} />
+        <Route path="/collections/parkingslots" element={<CollectionGridView collectionName="parkingslots" />} />
         {/* Dynamic catch for every single database table query */}
         <Route path="/collections/:collectionName" element={<DatabaseCollectionView />} />
 
