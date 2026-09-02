@@ -228,6 +228,7 @@ const getSlots = async (req, res) => {
     // Some older database records use the legacy field "buildingId".
     const slots = await Slot.find(filter)
       .populate("building", "name address")
+      .populate("owner", "name email phone")
       .lean();
 
     const legacyBuildingIds = [
@@ -306,10 +307,10 @@ const getMySlots = async (req, res) => {
 // @access  Public
 const getSlotById = async (req, res) => {
   try {
-    const slot = await Slot.findById(req.params.id).populate(
-      "building",
-      "name address totalFloors"
-    );
+    const slot = await Slot.findById(req.params.id)
+      .populate("building", "name address totalFloors")
+      .populate("owner", "name email phone");
+    
 
     if (!slot) {
       return res.status(404).json({ message: "Slot not found." });

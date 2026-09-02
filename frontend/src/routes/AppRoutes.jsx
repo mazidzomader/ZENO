@@ -9,11 +9,15 @@ import Register from "../pages/Register";
 // Layout & Dynamic Database View
 import DashboardLayout from "../layouts/DashboardLayout";
 import { DatabaseCollectionView } from "../pages/DatabaseCollectionView";
+import { CollectionGridView } from "../pages/collections/CollectionGridView";
 
 // Feature 13 — Slot CRUD
 import MySlots from "../pages/slots/MySlots";
 import SlotForm from "../pages/slots/SlotForm";
 import BulkSlotForm from "../pages/slots/BulkSlotForm";
+
+// Feature 02 — Slot Booking & Reservation
+import BookSlot from "../pages/bookings/BookSlot";
 
 // Feature 5 — Dynamic Pricing
 import PricingRules from "../pages/pricing/PricingRules";
@@ -63,6 +67,10 @@ function AppRoutes() {
         {/* Feature 06 — Booking History */}
         <Route path="/bookings/history" element={<BookingHistory />} />
 
+        {/* Buildings & Parking Slots — card/box view instead of raw table */}
+        <Route path="/collections/buildings" element={<CollectionGridView collectionName="buildings" />} />
+        <Route path="/collections/parkingslots" element={<CollectionGridView collectionName="parkingslots" />} />
+
         {/* Dynamic catch for every single database table query */}
         <Route path="/collections/:collectionName" element={<DatabaseCollectionView />} />
 
@@ -74,6 +82,9 @@ function AppRoutes() {
         <Route path="/slots/new" element={<SlotForm />} />
         <Route path="/slots/:id/edit" element={<SlotForm />} />
         <Route path="/slots/bulk" element={<BulkSlotForm />} />
+
+        {/* Feature 02 — Slot Booking & Reservation */}
+        <Route path="/slots/:id/book" element={<BookSlot />} />
 
         {/* Feature — Invoice Generation */}
         <Route path="/invoices" element={<InvoiceList />} />

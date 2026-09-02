@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Shield, Sun, Moon, Monitor, LogOut, ChevronUp, Check, Grid, Tag, Calendar } from "lucide-react";
+import { User, Shield, Sun, Moon, Monitor, LogOut, ChevronUp, Check, Grid, Tag, Calendar, Search } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useSidebar } from "../hooks/useSidebar";
 
@@ -119,6 +119,36 @@ export function UserProfile() {
                 >
                   <Tag className="w-3.5 h-3.5 stroke-[2.5]" />
                   Pricing Rules
+                </button>
+              </div>
+            )}
+
+                        {userRole === "renter" && (
+              <div className="border-t border-b border-ink/20 my-1 py-1">
+                <div className="px-2 py-1 text-[8px] text-inkMuted">RENTER:</div>
+
+                <button
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    navigate("/slots/browse");
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-ink hover:bg-bgAlt transition-colors outline-none focus-visible:bg-bgAlt"
+                  role="menuitem"
+                >
+                  <Search className="w-3.5 h-3.5 stroke-[2.5]" />
+                  Browse Slots
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    navigate("/bookings/history");
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-ink hover:bg-bgAlt transition-colors outline-none focus-visible:bg-bgAlt"
+                  role="menuitem"
+                >
+                  <Calendar className="w-3.5 h-3.5 stroke-[2.5]" />
+                  My Bookings
                 </button>
               </div>
             )}
