@@ -62,20 +62,15 @@ export const sidebarItems = [
   {
     id: "payments",
     title: "Payments",
-    icon: "DollarSign",
-    path: "/collections/payments"
+    icon: "CreditCard",
+    path: "/payments"
   },
-  {
-    id: "subscriptionplans",
-    title: "Subscription Plans",
-    icon: "Briefcase",
-    path: "/collections/subscriptionplans"
-  },
+
   {
     id: "subscriptions",
     title: "Subscriptions",
     icon: "KeyRound",
-    path: "/collections/subscriptions"
+    path: "/subscriptions"
   },
   {
     id: "reviews",

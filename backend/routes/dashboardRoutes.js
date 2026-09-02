@@ -27,7 +27,9 @@ router.get("/summary", protect, async (req, res) => {
       const status = activeBooking ? "Parked" : "No active booking";
 
       // 2. Fetch user's vehicles
-      const vehicles = await db.collection("vehicles").find({ renterId: userId }).toArray();
+      const vehicles = await db.collection("vehicles").find({ 
+        $or: [{ userId: userId }, { renterId: userId }] 
+      }).toArray();
 
       // 3. Fetch reviews and calculate average rating
       const reviews = await db.collection("reviews").find({ renterId: userId }).toArray();

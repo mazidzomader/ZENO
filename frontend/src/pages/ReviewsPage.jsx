@@ -102,7 +102,7 @@ function BookingRow({ booking, onReviewAdded }) {
           </div>
           <div>
             <span className="text-[9px] text-inkMuted block uppercase">Total Paid</span>
-            <span className="font-bold">৳{booking.totalAmount?.toLocaleString()}</span>
+            <span className="font-bold">${booking.totalAmount?.toLocaleString()}</span>
           </div>
         </div>
 

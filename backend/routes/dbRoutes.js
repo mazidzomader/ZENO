@@ -60,13 +60,17 @@ const buildFilter = async (collectionName, user, db) => {
   // Collections with a direct renterId field
   const renterIdCollections = [
     "bookings",
-    "vehicles",
     "invoices",
     "subscriptions",
-    "reviews",
+    "reviews"
   ];
   if (renterIdCollections.includes(collectionName)) {
     return { renterId: userId };
+  }
+
+  // Vehicles use userId
+  if (collectionName === "vehicles") {
+    return { userId: userId };
   }
 
   // Notifications keyed by userId

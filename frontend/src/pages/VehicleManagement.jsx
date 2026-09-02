@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import Layout from "../components/Layout";
 import { useAuth } from "../context/AuthContext";
-
-const API_BASE = "http://localhost:5000";
+import API from "../services/api";
 
 function VehicleCard({ vehicle, onDelete, showOwner = false }) {
   return (
@@ -17,12 +15,12 @@ function VehicleCard({ vehicle, onDelete, showOwner = false }) {
           </span>
         </div>
         <div>
-          <span className="text-inkMuted text-xs block">MODEL_TYPE:</span>
+          <span className="text-inkMuted text-xs block">MODEL TYPE:</span>
           <span className="font-bold text-ink uppercase">{vehicle.type}</span>
         </div>
         {showOwner && vehicle.userId && (
           <div className="border-t border-ink/10 pt-1 mt-1">
-            <span className="text-inkMuted text-xs block">REGISTERED_TO:</span>
+            <span className="text-inkMuted text-xs block">REGISTERED TO:</span>
             <span className="font-bold text-ink">
               {vehicle.userId.name || "Unknown User"}
               {vehicle.userId.email ? ` (${vehicle.userId.email})` : ""}
@@ -36,7 +34,7 @@ function VehicleCard({ vehicle, onDelete, showOwner = false }) {
           onClick={() => onDelete(vehicle._id)}
           className="w-full border-t-2 border-ink text-center py-2 text-xs font-bold bg-bgAlt hover:bg-alert hover:text-bgBase transition-none"
         >
-          REMOVE_VEHICLE
+          REMOVE VEHICLE
         </button>
       )}
     </div>
@@ -47,7 +45,7 @@ function VehicleGrid({ vehicles, loading, emptyMessage, onDelete, showOwner }) {
   if (loading) {
     return (
       <div className="p-4 border-2 border-dashed border-inkMuted text-inkMuted font-mono">
-        LOADING_VEHICLE_FLEET...
+        LOADING VEHICLE FLEET...
       </div>
     );
   }
@@ -86,44 +84,36 @@ export default function VehicleManagement() {
 
   const fetchMine = useCallback(async () => {
     try {
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`${API_BASE}/api/vehicles`, { headers });
-      if (!res.ok) throw new Error("Failed to load your vehicles.");
-      setMyVehicles(await res.json());
+      const res = await API.get("/vehicles");
+      setMyVehicles(res.data);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.error || "Failed to load your vehicles.");
     } finally {
       setLoadingMine(false);
     }
-  }, [token]);
+  }, []);
 
-  // FIXED: Removed unused 'err' variable
   const fetchBuildingVehicles = useCallback(async () => {
     try {
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`${API_BASE}/api/vehicles/building`, { headers });
-      if (!res.ok) return; 
-      setBuildingVehicles(await res.json());
+      const res = await API.get("/vehicles/building");
+      setBuildingVehicles(res.data);
     } catch {
-      // Silently fails, no unused 'err' variable
+      // Silently fails
     } finally {
       setLoadingBuilding(false);
     }
-  }, [token]);
+  }, []);
 
-  // FIXED: Removed unused 'err' variable
   const fetchAllVehicles = useCallback(async () => {
     try {
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`${API_BASE}/api/vehicles/all`, { headers });
-      if (!res.ok) return; 
-      setAllVehicles(await res.json());
+      const res = await API.get("/vehicles/all");
+      setAllVehicles(res.data);
     } catch {
-      // Silently fails, no unused 'err' variable
+      // Silently fails
     } finally {
       setLoadingAll(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -148,57 +138,40 @@ export default function VehicleManagement() {
     setSubmitting(true);
 
     try {
-      const headers = token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
-      const res = await fetch(`${API_BASE}/api/vehicles`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(formData)
-      });
-
-      const body = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(body.error || "Failed to register vehicle.");
-      }
-
+      await API.post("/vehicles", formData);
       setFormData({ plateNumber: "", type: "", sizeClass: "medium" });
-      setSuccess("VEHICLE_REGISTERED_SUCCESSFULLY");
+      setSuccess("VEHICLE REGISTERED SUCCESSFULLY");
       await fetchMine();
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.error || "Failed to register vehicle.");
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this vehicle?")) return;
+    if (!window.confirm("Are you sure you want to delete this vehicle?")) return;
     setError("");
     setSuccess("");
     try {
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`${API_BASE}/api/vehicles/${id}`, {
-        method: "DELETE",
-        headers
-      });
-      if (!res.ok) throw new Error("Could not remove vehicle record.");
-      setSuccess("VEHICLE_REMOVED_SUCCESSFULLY");
+      await API.delete(`/vehicles/${id}`);
+      setSuccess("VEHICLE REMOVED SUCCESSFULLY");
       await fetchMine();
       if (role === "owner") await fetchBuildingVehicles();
       if (role === "admin") await fetchAllVehicles();
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.error || "Could not remove vehicle record.");
     }
   };
 
   return (
-    <Layout>
+    <>
       <div className="bg-bgAlt py-12 px-4 min-h-[calc(100vh-140px)] font-mono text-sm">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
 
           <div className="md:col-span-1 border-4 border-ink bg-bgBase shadow-[8px_8px_0px_0px_rgba(17,17,17,1)] self-start">
             <div className="bg-ink text-bgBase px-4 py-2 font-bold uppercase text-xs flex justify-between items-center">
-              <span>REGISTER_VEHICLE</span>
+              <span>REGISTER VEHICLE</span>
               <span className="text-[10px] text-highlight uppercase">{role}</span>
             </div>
 
@@ -260,7 +233,7 @@ export default function VehicleManagement() {
                 disabled={submitting}
                 className="w-full bg-ink text-bgBase font-bold uppercase p-3 hover:bg-highlight hover:text-ink border-2 border-ink transition-none disabled:opacity-60"
               >
-                {submitting ? "> SAVING..." : "REGISTER_VEHICLE"}
+                {submitting ? "> SAVING..." : "REGISTER VEHICLE"}
               </button>
             </form>
           </div>
@@ -269,7 +242,7 @@ export default function VehicleManagement() {
 
             <div className="space-y-4">
               <div className="flex justify-between items-center border-b-4 border-ink pb-2">
-                <h1 className="font-display text-2xl font-bold uppercase tracking-tight">MY_VEHICLES</h1>
+                <h1 className="font-display text-2xl font-bold uppercase tracking-tight">MY VEHICLES</h1>
                 <span className="bg-ink text-bgBase text-xs px-2 py-1 font-bold">
                   {String(myVehicles.length).padStart(2, "0")} TOTAL
                 </span>
@@ -286,7 +259,7 @@ export default function VehicleManagement() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b-4 border-ink pb-2">
                   <h2 className="font-display text-xl font-bold uppercase tracking-tight">
-                    VEHICLES_IN_MY_BUILDINGS
+                    VEHICLES IN MY BUILDINGS
                   </h2>
                   <span className="bg-ink text-bgBase text-xs px-2 py-1 font-bold">
                     {String(buildingVehicles.length).padStart(2, "0")} TOTAL
@@ -308,7 +281,7 @@ export default function VehicleManagement() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b-4 border-ink pb-2">
                   <h2 className="font-display text-xl font-bold uppercase tracking-tight">
-                    ALL_VEHICLES_SYSTEM_WIDE
+                    ALL VEHICLES SYSTEM WIDE
                   </h2>
                   <span className="bg-ink text-bgBase text-xs px-2 py-1 font-bold">
                     {String(allVehicles.length).padStart(2, "0")} TOTAL
@@ -328,6 +301,6 @@ export default function VehicleManagement() {
 
         </div>
       </div>
-    </Layout>
+    </>
   );
 }
