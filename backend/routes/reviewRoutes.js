@@ -20,7 +20,10 @@ router.get("/bookings", protect, async (req, res) => {
     const userIdStr = String(req.user._id);
     const bookings = await db
       .collection("bookings")
-      .find({ $or: [{ renterId: userId }, { renterId: userIdStr }] })
+      .find({ 
+        $or: [{ renterId: userId }, { renterId: userIdStr }],
+        status: "confirmed"
+      })
       .sort({ startTime: -1 })
       .toArray();
 
@@ -91,13 +94,17 @@ router.post("/", protect, async (req, res) => {
       return res.status(400).json({ error: "Booking ID is required." });
     }
 
-    // 1. Validate booking existence and ownership
+    // 1. Validate booking existence, ownership, and confirmed status
     const booking = await db
       .collection("bookings")
       .findOne({ _id: toId(bookingId), renterId: userId });
 
     if (!booking) {
       return res.status(404).json({ error: "Booking not found or access denied." });
+    }
+
+    if (booking.status !== "confirmed") {
+      return res.status(400).json({ error: "You can only review bookings that have been successfully paid/confirmed." });
     }
 
     // 2. Validate that it is not already reviewed (strict read-only post-creation)

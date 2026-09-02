@@ -32,6 +32,16 @@ import { InvoiceList, InvoiceView } from "../pages/InvoicePage";
 import Dashboard from "../pages/Dashboard";
 import ReviewsPage from "../pages/ReviewsPage";
 
+// Feature — Stripe Payments (Isolated)
+import PaymentsPage from "../pages/payment/PaymentsPage";
+import PaymentSuccess from "../pages/payment/PaymentSuccess";
+import PaymentCancel from "../pages/payment/PaymentCancel";
+
+// Feature — Subscription Plans (Isolated)
+import SubscriptionPage from "../pages/subscription/SubscriptionPage";
+import SubscriptionSuccess from "../pages/subscription/SubscriptionSuccess";
+import SubscriptionCancel from "../pages/subscription/SubscriptionCancel";
+
 
 function AppRoutes() {
   return (
@@ -81,7 +91,21 @@ function AppRoutes() {
         <Route path="/profile/vehicles" element={<VehicleManagement />} />
         <Route path="/collections/vehicles" element={<VehicleManagement />} />
 
+        {/* Feature — Payments (Stripe, Isolated) */}
+        <Route path="/payments" element={<PaymentsPage />} />
+
+        {/* Feature — Subscription Plans (Isolated) */}
+        <Route path="/subscriptions" element={<SubscriptionPage />} />
+
       </Route>
+
+      {/* Payment redirect pages — outside DashboardLayout (full-screen, no sidebar) */}
+      <Route path="/payment/success" element={<PaymentSuccess />} />
+      <Route path="/payment/cancel" element={<PaymentCancel />} />
+
+      {/* Subscription redirect pages — outside DashboardLayout */}
+      <Route path="/subscription/success" element={<SubscriptionSuccess />} />
+      <Route path="/subscription/cancel" element={<SubscriptionCancel />} />
 
       {/* Fallback Catch-All */}
       <Route path="*" element={<Navigate to="/" replace />} />

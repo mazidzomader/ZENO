@@ -197,7 +197,7 @@ export default function Dashboard() {
                     <DollarSign className="w-4 h-4 text-inkMuted" />
                   </div>
                   <div className="font-mono text-3xl font-extrabold text-ink">
-                    ৳{(summary.totalSpent || 0).toLocaleString()}
+                    ${(summary.totalSpent || 0).toLocaleString()}
                   </div>
                 </div>
 
@@ -314,7 +314,7 @@ export default function Dashboard() {
                     <DollarSign className="w-4 h-4 text-inkMuted" />
                   </div>
                   <div className="font-mono text-3xl font-extrabold text-ink">
-                    ৳{(summary.totalEarned || 0).toLocaleString()}
+                    ${(summary.totalEarned || 0).toLocaleString()}
                   </div>
                 </div>
 

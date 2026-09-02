@@ -176,7 +176,7 @@ const InvoiceTemplate = ({ inv }) => (
           Total Paid
         </div>
         <div style={{ fontSize: "28px", fontWeight: "800", fontFamily: "'JetBrains Mono', monospace" }}>
-          ৳ {inv.payment?.amount?.toLocaleString() ?? "—"}
+          $ {inv.payment?.amount?.toLocaleString() ?? "—"}
         </div>
       </div>
     </div>
@@ -384,7 +384,7 @@ export function InvoiceList() {
               <tr className="border-b-2 border-ink bg-bgAlt text-ink font-bold uppercase tracking-wider">
                 <th className="p-3 border-r border-ink">Invoice No.</th>
                 <th className="p-3 border-r border-ink">Issued Date</th>
-                <th className="p-3 border-r border-ink">Amount (৳)</th>
+                <th className="p-3 border-r border-ink">Amount ($)</th>
                 <th className="p-3 text-center">Action</th>
               </tr>
             </thead>

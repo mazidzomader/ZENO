@@ -47,7 +47,8 @@ const Vehicle =
   mongoose.model(
     "Vehicle",
     new mongoose.Schema({
-      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      renterId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Legacy support
       plateNumber: { type: String, required: true, uppercase: true, trim: true },
       type: { type: String, required: true, trim: true }, // e.g., Sedan, SUV, Hatchback, Bike
       sizeClass: { type: String, enum: ["small", "medium", "large"], required: true },
@@ -107,7 +108,9 @@ const Booking =
 router.get("/", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
-    const vehicles = await Vehicle.find({ userId }).sort({ createdAt: -1 });
+    const vehicles = await Vehicle.find({ 
+      $or: [{ userId: userId }, { renterId: userId }] 
+    }).sort({ createdAt: -1 });
     return res.json(vehicles);
   } catch (err) {
     console.error(err);

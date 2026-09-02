@@ -364,17 +364,17 @@ function BrowseSlots() {
                       <div className="mt-3 grid grid-cols-3 gap-2 text-center font-mono">
                         <div className="border border-black p-2">
                           <p className="text-xs uppercase">Hour</p>
-                          <p className="mt-1 font-bold">৳{hourlyRate}</p>
+                          <p className="mt-1 font-bold">${hourlyRate}</p>
                         </div>
 
                         <div className="border border-black p-2">
                           <p className="text-xs uppercase">Day</p>
-                          <p className="mt-1 font-bold">৳{dailyRate}</p>
+                          <p className="mt-1 font-bold">${dailyRate}</p>
                         </div>
 
                         <div className="border border-black p-2">
                           <p className="text-xs uppercase">Month</p>
-                          <p className="mt-1 font-bold">৳{monthlyRate}</p>
+                          <p className="mt-1 font-bold">${monthlyRate}</p>
                         </div>
                       </div>
                     </div>

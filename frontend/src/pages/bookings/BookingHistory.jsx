@@ -16,7 +16,7 @@ function formatDateTime(value) {
 function formatAmount(value) {
   const amount = Number(value || 0);
 
-  return `৳${amount.toLocaleString()}`;
+  return `$${amount.toLocaleString()}`;
 }
 
 function BookingHistory() {
