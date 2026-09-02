@@ -71,7 +71,8 @@ router.get("/", protect, async (req, res) => {
           _id: inv._id,
           invoiceNumber: inv.invoiceNumber,
           createdAt: inv.createdAt,
-          amount: payment?.amount ?? null,
+          // For subscription invoices (no paymentId), fall back to inline amount
+          amount: payment?.amount ?? inv.paymentAmount ?? null,
         };
       })
     );
@@ -157,6 +158,25 @@ router.get("/:id", protect, async (req, res) => {
       return res.status(403).json({ error: "Access denied." });
     }
 
+    // Build the payment object:
+    //   - If there is a paymentId → use the linked payments collection document
+    //   - If no paymentId (e.g. subscription) → fall back to inline fields stored on the invoice
+    const paymentObj = payment
+      ? {
+          amount: payment.amount,
+          method: payment.method,
+          transactionRef: payment.transactionRef,
+          paidAt: payment.paidAt,
+        }
+      : (inv.paymentMethod
+          ? {
+              amount: inv.paymentAmount ?? 0,
+              method: inv.paymentMethod,
+              transactionRef: inv.paymentTransactionRef ?? null,
+              paidAt: inv.paymentPaidAt ?? inv.createdAt,
+            }
+          : null);
+
     res.json({
       _id: inv._id,
       invoiceNumber: inv.invoiceNumber,
@@ -172,14 +192,7 @@ router.get("/:id", protect, async (req, res) => {
         ? { name: building.name, address: building.address }
         : null,
       booking: booking ? { startTime: booking.startTime } : null,
-      payment: payment
-        ? {
-            amount: payment.amount,
-            method: payment.method,
-            transactionRef: payment.transactionRef,
-            paidAt: payment.paidAt,
-          }
-        : null,
+      payment: paymentObj,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

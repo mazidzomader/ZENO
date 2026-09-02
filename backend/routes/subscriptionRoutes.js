@@ -324,15 +324,22 @@ router.post("/use-hours", protect, async (req, res) => {
 
     // ── 3. Generate invoice ───────────────────────────────────────────────────
     const invoiceNumber = await nextInvoiceNumber(db);
+    const paidAt = new Date();
+    // For subscription payments there is no separate payment document,
+    // so we embed the payment fields directly on the invoice.
     const invoiceDoc = {
       invoiceNumber,
       bookingId: toId(bookingId),
       renterId: toId(req.user._id),
       paymentId: null,
+      // Inline payment details (shown on invoice when paymentId is absent)
       paymentMethod: "subscription",
+      paymentTransactionRef: `SUB-${String(sub._id)}-${Date.now()}`,
+      paymentPaidAt: paidAt,
+      paymentAmount: 0, // covered by subscription — no direct charge
       subscriptionId: sub._id,
       hoursDeducted: durationH,
-      createdAt: new Date(),
+      createdAt: paidAt,
     };
     const invoiceResult = await db.collection("invoices").insertOne(invoiceDoc);
 
