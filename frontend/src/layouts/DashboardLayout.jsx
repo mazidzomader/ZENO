@@ -38,7 +38,7 @@ function DashboardLayoutContent() {
         </header>
 
         {/* Scrollable Main Content Port */}
-        <main className="flex-grow p-6 md:p-8 overflow-y-auto bg-bgBase">
+        <main className="flex-grow flex flex-col p-6 md:p-8 overflow-y-auto bg-bgBase">
           <Outlet />
         </main>
       </div>

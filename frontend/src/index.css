@@ -21,7 +21,8 @@
 }
 
 /* Strict global overrides -- flat, drafting-style geometry only */
-* {
+/* Exclude Leaflet internals so map controls and tiles render correctly */
+*:not(.leaflet-container):not(.leaflet-control):not(.leaflet-control *):not(.leaflet-popup):not(.leaflet-popup *):not(.leaflet-tooltip):not(.leaflet-tooltip *):not(.leaflet-pane):not(.leaflet-pane *) {
   border-radius: 0 !important;
   box-shadow: none !important;
 }

@@ -25,6 +25,17 @@ const buildingSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
+
+    location: {
+      lat: {
+        type: Number,
+        required: false,
+      },
+      lng: {
+        type: Number,
+        required: false,
+      },
+    },
   },
   {
     timestamps: true,

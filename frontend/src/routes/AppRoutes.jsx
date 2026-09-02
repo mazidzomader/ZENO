@@ -35,6 +35,7 @@ import { InvoiceList, InvoiceView } from "../pages/InvoicePage";
 
 import Dashboard from "../pages/Dashboard";
 import ReviewsPage from "../pages/ReviewsPage";
+import Navigation from "../pages/Navigation";
 
 
 function AppRoutes() {
@@ -56,6 +57,9 @@ function AppRoutes() {
         <Route path="/reports" element={<Navigate to="/collections/reports" replace />} />
         {/* Feature 06 — Booking History */}
         <Route path="/bookings/history" element={<BookingHistory />} />
+
+        {/* Feature 07 — Navigation */}
+        <Route path="/navigation" element={<Navigation />} />
 
         {/* Buildings & Parking Slots — card/box view instead of raw table */}
         <Route path="/collections/buildings" element={<CollectionGridView collectionName="buildings" />} />
