@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Booking = require("../models/Booking");
 const Slot = require("../models/Slot");
+const { createNotification } = require('../services/notificationService');
 
 // @desc    Create a booking (reserve a slot) for the logged-in renter
 // @route   POST /api/bookings
@@ -78,6 +79,15 @@ const createBooking = async (req, res) => {
     // Mark the slot as reserved so nobody else can book it
     slot.status = "reserved";
     await slot.save();
+    
+    await createNotification({
+      userId: req.user._id,
+      type: 'booking_confirmed', // actually pending, but we'll rename later
+      title: 'Booking Pending Payment',
+      message: `You have successfully booked slot ${slot.slotNumber} from ${new Date(startTime).toLocaleString()} to ${new Date(endTime).toLocaleString()}. Please complete payment.`,
+      relatedId: booking._id,
+      sendEmail: true,
+      });
 
     return res.status(201).json({
       message: "Slot booked successfully.",

@@ -12,6 +12,7 @@ const router = express.Router();
 const Stripe = require("stripe");
 const mongoose = require("mongoose");
 const { protect } = require("../middleware/authMiddleware");
+const { createNotification } = require('../services/notificationService');
 
 // Lazy Stripe initialization — deferred until first request so that
 // dotenv.config() in server.js has already populated process.env.
@@ -256,6 +257,28 @@ router.post("/verify-session", protect, async (req, res) => {
       payment: { ...paymentDoc, _id: paymentId },
       invoice: { ...invoiceDoc, _id: invoiceResult.insertedId },
     });
+
+    await createNotification({
+      userId: renterId,
+      type: 'payment_receipt',
+      title: 'Payment Confirmed',
+      message: `Your payment of $${session.amount_total / 100} for booking #${String(bookingId).slice(-6)} has been received. Invoice ${invoiceNumber} is available.`,
+      relatedId: bookingId,
+      sendEmail: true,
+    });
+    // Also notify the slot owner
+    const bookingDoc = await db.collection('bookings').findOne({ _id: toId(bookingId) });
+    const slot = await db.collection('parkingslots').findOne({ _id: bookingDoc?.slotId });
+    if (slot && slot.owner) {
+      await createNotification({
+        userId: slot.owner,
+        type: 'booking_confirmed',
+        title: 'New Booking Confirmed',
+        message: `Your slot ${slot.slotNumber} has been booked by ${req.user.name || 'a renter'}.`,
+        relatedId: bookingId,
+        sendEmail: false, // no email for owner to reduce spam
+      });
+    }
   } catch (err) {
     console.error("verify-session error:", err.message);
     res.status(500).json({ error: err.message });

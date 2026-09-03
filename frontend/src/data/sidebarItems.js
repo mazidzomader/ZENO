@@ -88,7 +88,7 @@ export const sidebarItems = [
     id: "notifications",
     title: "Notifications",
     icon: "Bell",
-    path: "/collections/notifications"
+    path: "/notifications"
   },
   {
     id: "prelude",

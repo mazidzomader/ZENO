@@ -1,12 +1,40 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+import { Bell } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import API from '../services/api';
+
 function Navbar() {
   const { user, logout } = useAuth();
+  
+  const [unreadCount, setUnreadCount] = useState(0);
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await API.get('/notifications/unread-count');
+        setUnreadCount(res.data.unreadCount);
+      } catch {
+        // ignore
+      }
+    };
+    fetchCount();
+    // Optionally poll every 30s
+    const interval = setInterval(fetchCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <header className="w-full bg-bgBase border-b-4 border-ink">
       <div className="flex items-center justify-between px-6 py-4">
+        <Link to="/notifications" className="relative p-2 border-2 border-ink hover:bg-highlight">
+          <Bell className="w-5 h-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-alert text-bgBase rounded-full text-[10px] font-bold w-5 h-5 flex items-center justify-center border-2 border-ink">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </Link>
         <Link
           to="/"
           className="font-display font-bold text-2xl tracking-tighter uppercase"
