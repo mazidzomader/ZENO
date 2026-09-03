@@ -1,12 +1,28 @@
-import { Outlet } from "react-router-dom";
-import { Menu } from "lucide-react";
 import { SidebarProvider } from "../context/SidebarContext";
 import { useSidebar } from "../hooks/useSidebar";
 import { Sidebar } from "../components/Sidebar";
+import { Link, Outlet } from "react-router-dom";
+import { Bell, Menu } from "lucide-react";
+import { useState, useEffect } from "react";
+import API from "../services/api";
 
 function DashboardLayoutContent() {
   const { isCollapsed, setIsMobileOpen } = useSidebar();
-
+  const [unreadCount, setUnreadCount] = useState(0);
+  
+  useEffect(() => {
+  const fetchCount = async () => {
+    try {
+      const res = await API.get('/notifications/unread-count');
+      setUnreadCount(res.data.unreadCount || 0);
+    } catch {
+      // ignore
+    }
+  };
+  fetchCount();
+  const interval = setInterval(fetchCount, 30000);
+  return () => clearInterval(interval);
+  }, []);
   return (
     <div className="min-h-screen bg-bgBase text-ink font-sans flex flex-col md:flex-row relative">
       {/* Sidebar Component */}
@@ -34,6 +50,16 @@ function DashboardLayoutContent() {
             <span className="font-display font-bold text-lg uppercase tracking-tighter text-ink">
               ZENO
             </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link to="/notifications" className="relative p-2 border-2 border-ink hover:bg-highlight">
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-alert text-bgBase rounded-full text-[10px] font-bold w-5 h-5 flex items-center justify-center border-2 border-ink">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
           </div>
         </header>
 
