@@ -17,6 +17,7 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const vehicleRoutes = require("./routes/vehicleRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
+const checkinoutRoutes = require('./routes/checkinoutRoutes');
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
+app.use('/api/checkinout', checkinoutRoutes);
 
 app.get("/", (req, res) => {
   res.send("ZENO backend is running!");
