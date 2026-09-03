@@ -30,6 +30,9 @@ import Reports from "../pages/Reports";
 import VehicleManagement from "../pages/VehicleManagement";
 //import ProtectedRoute from "../components/ProtectedRoute";
 
+// Feature 10 — Overstay Detection and Penalty System
+import CheckInOutPage from '../pages/CheckInOutPage';
+
 // Feature — Invoice Generation
 import { InvoiceList, InvoiceView } from "../pages/InvoicePage";
 
@@ -105,6 +108,9 @@ function AppRoutes() {
         {/* Feature 14 — Renter Profile & Vehicle Management */}
         <Route path="/profile/vehicles" element={<VehicleManagement />} />
         <Route path="/collections/vehicles" element={<VehicleManagement />} />
+        
+        {/* Feature 10 — Overstay Detection and Penalty System */}
+        <Route path="/checkinout" element={<CheckInOutPage />} />
 
         {/* Feature — Payments (Stripe, Isolated) */}
         <Route path="/payments" element={<PaymentsPage />} />
