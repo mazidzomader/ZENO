@@ -4,7 +4,7 @@ import * as Icons from "lucide-react";
 import { useSidebar } from "../hooks/useSidebar";
 
 export function SidebarItem({ item, isSubmenuItem = false }) {
-  const { isCollapsed, setIsCollapsed } = useSidebar();
+  const { isCollapsed } = useSidebar();
   const location = useLocation();
 
   // Check if current path matches the item path

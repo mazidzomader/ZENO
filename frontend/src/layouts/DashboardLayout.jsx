@@ -37,8 +37,7 @@ function DashboardLayoutContent() {
             : "0px"
         }}
       >
-        {/* Mobile View Top Header Navbar */}
-        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-bgAlt border-b-2 border-ink sticky top-0 z-30 select-none">
+        <header className="flex items-center justify-between px-4 py-3 bg-bgAlt border-b-2 border-ink sticky top-0 z-30 select-none">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileOpen(true)}
