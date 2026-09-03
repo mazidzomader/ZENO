@@ -3,6 +3,7 @@ const CheckInOut = require('../models/CheckInOut');
 const Booking = require('../models/Booking');
 const Slot = require('../models/Slot');
 const OverstayPenalty = require('../models/OverstayPenalty');
+const { createNotification } = require('../services/notificationService');
 
 // Helper to get the slot's hourly rate (or fallback to a default)
 const getSlotHourlyRate = async (slotId) => {
@@ -109,7 +110,16 @@ exports.checkOut = async (req, res) => {
         notes: `Overstay of ${overstayMinutes} minutes beyond booked end time.`,
       });
       await penalty.save();
-
+      
+      const slot = await Slot.findById(booking.slotId);
+      await createNotification({
+        userId: userId,
+        type: 'overstay_alert',
+        title: 'Overstay Penalty Applied',
+        message: `You checked out late from slot ${slot?.slotNumber || 'your booking'}. An additional penalty of $${penalty.penaltyAmount} has been added.`,
+        relatedId: booking._id,
+        sendEmail: true,
+      });
       // Optionally update booking's totalAmount to include penalty
       // (We'll keep it separate, but you can add if needed)
     }
