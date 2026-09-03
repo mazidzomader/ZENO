@@ -33,6 +33,9 @@ import VehicleManagement from "../pages/VehicleManagement";
 // Feature 10 — Overstay Detection and Penalty System
 import CheckInOutPage from '../pages/CheckInOutPage';
 
+// Feature 17 — Notification and Alert System
+import NotificationsPage from '../pages/NotificationsPage';
+
 // Feature — Invoice Generation
 import { InvoiceList, InvoiceView } from "../pages/InvoicePage";
 
@@ -111,7 +114,11 @@ function AppRoutes() {
         
         {/* Feature 10 — Overstay Detection and Penalty System */}
         <Route path="/checkinout" element={<CheckInOutPage />} />
-
+        
+        {/* Feature 17 — Notification and Alert System */}
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/collections/notifications" element={<Navigate to="/notifications" replace />} />
+        
         {/* Feature — Payments (Stripe, Isolated) */}
         <Route path="/payments" element={<PaymentsPage />} />
 
