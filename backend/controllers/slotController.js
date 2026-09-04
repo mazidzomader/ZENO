@@ -1,6 +1,6 @@
 const Slot = require("../models/Slot");
 const Building = require("../models/Building");
-
+const Booking = require("../models/Booking");
 // Small helper: only the building's owner (or an admin) may manage its slots
 const canManageBuilding = (req, buildingDoc) => {
   return (
@@ -345,6 +345,16 @@ const updateSlot = async (req, res) => {
         .json({ message: "You do not have permission to edit this slot." });
     }
 
+    // A slot that's currently reserved or occupied has an active booking
+    // tied to it. Editing floor/price/dimensions out from under that
+    // booking would silently change what the renter already paid for, so
+    // block it here. Owners can still edit once the booking ends.
+    if (["reserved", "occupied"].includes(slot.status)) {
+      return res.status(409).json({
+        message: `This slot is currently "${slot.status}" and has an active booking. Editing is disabled until the booking is completed or cancelled.`,
+      });
+    }
+
     if (req.body.floor !== undefined) {
       if (req.body.floor < 1 || req.body.floor > buildingDoc.totalFloors) {
         return res.status(400).json({
@@ -353,6 +363,10 @@ const updateSlot = async (req, res) => {
       }
     }
 
+    // "status" is intentionally excluded here — it must only change via the
+    // dedicated /activate and /deactivate endpoints (or automatically by the
+    // booking flow), never as a raw field edit that could desync a slot from
+    // its real booking state.
     const updatableFields = [
       "slotNumber",
       "floor",
@@ -361,7 +375,6 @@ const updateSlot = async (req, res) => {
       "pricePerHour",
       "pricePerDay",
       "pricePerMonth",
-      "status",
     ];
 
     updatableFields.forEach((field) => {
@@ -405,6 +418,12 @@ const deactivateSlot = async (req, res) => {
         .json({ message: "You do not have permission to modify this slot." });
     }
 
+    if (["reserved", "occupied"].includes(slot.status)) {
+      return res.status(409).json({
+        message: `This slot is currently "${slot.status}" and cannot be deactivated until the active booking ends or is cancelled.`,
+      });
+    }
+
     slot.status = "inactive";
     await slot.save();
 
@@ -412,6 +431,53 @@ const deactivateSlot = async (req, res) => {
       message: "Slot deactivated.",
       slot,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Permanently delete a slot
+// @route   DELETE /api/slots/:id
+// @access  Private (that building's owner, or admin)
+const deleteSlot = async (req, res) => {
+  try {
+    const slot = await Slot.findById(req.params.id);
+
+    if (!slot) {
+      return res.status(404).json({ message: "Slot not found." });
+    }
+
+    const buildingDoc = await Building.findById(slot.building);
+
+    if (!buildingDoc || !canManageBuilding(req, buildingDoc)) {
+      return res
+        .status(403)
+        .json({ message: "You do not have permission to delete this slot." });
+    }
+
+    if (["reserved", "occupied"].includes(slot.status)) {
+      return res.status(409).json({
+        message: `This slot is currently "${slot.status}" and cannot be deleted while it has an active booking. Cancel or wait for the booking to complete first.`,
+      });
+    }
+
+    // Extra safety net: even if status somehow drifted out of sync, never
+    // delete a slot that any non-final booking still references.
+    const activeBooking = await Booking.findOne({
+      slotId: slot._id,
+      status: { $in: ["confirmed", "active"] },
+    });
+
+    if (activeBooking) {
+      return res.status(409).json({
+        message:
+          "This slot has an active or upcoming booking and cannot be deleted.",
+      });
+    }
+
+    await slot.deleteOne();
+
+    res.status(200).json({ message: "Slot deleted successfully." });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -448,32 +514,7 @@ const activateSlot = async (req, res) => {
   }
 };
 
-// @desc    Permanently delete a slot
-// @route   DELETE /api/slots/:id
-// @access  Private (that building's owner, or admin)
-const deleteSlot = async (req, res) => {
-  try {
-    const slot = await Slot.findById(req.params.id);
 
-    if (!slot) {
-      return res.status(404).json({ message: "Slot not found." });
-    }
-
-    const buildingDoc = await Building.findById(slot.building);
-
-    if (!buildingDoc || !canManageBuilding(req, buildingDoc)) {
-      return res
-        .status(403)
-        .json({ message: "You do not have permission to delete this slot." });
-    }
-
-    await slot.deleteOne();
-
-    res.status(200).json({ message: "Slot deleted successfully." });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
 
 module.exports = {
   createSlot,

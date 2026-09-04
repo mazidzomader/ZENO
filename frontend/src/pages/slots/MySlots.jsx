@@ -385,30 +385,41 @@ function MySlots() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
-                        <Link
-                          to={`/slots/${slot._id}/edit`}
-                          className="border-2 border-ink px-3 py-1 hover:bg-ink hover:text-bgBase uppercase"
-                        >
-                          Edit
-                        </Link>
+                        {["reserved", "occupied"].includes(slot.status) ? (
+                          <span
+                            className="border-2 border-inkMuted text-inkMuted px-3 py-1 uppercase cursor-not-allowed"
+                            title="This slot has an active booking. Edit/deactivate/delete are disabled until it ends or is cancelled."
+                          >
+                            Locked (Active Booking)
+                          </span>
+                        ) : (
+                          <>
+                            <Link
+                              to={`/slots/${slot._id}/edit`}
+                              className="border-2 border-ink px-3 py-1 hover:bg-ink hover:text-bgBase uppercase"
+                            >
+                              Edit
+                            </Link>
+                            <button
+                              onClick={() => handleToggleStatus(slot)}
+                              className="border-2 border-ink px-3 py-1 hover:bg-highlight uppercase"
+                            >
+                              {slot.status === "inactive" ? "Activate" : "Deactivate"}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(slot)}
+                              className="border-2 border-alert text-alert px-3 py-1 hover:bg-alert hover:text-bgBase uppercase"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
                         <Link
                           to={`/pricing-rules?slot=${slot._id}`}
                           className="border-2 border-ink px-3 py-1 hover:bg-highlight uppercase"
                         >
                           Pricing
                         </Link>
-                        <button
-                          onClick={() => handleToggleStatus(slot)}
-                          className="border-2 border-ink px-3 py-1 hover:bg-highlight uppercase"
-                        >
-                          {slot.status === "inactive" ? "Activate" : "Deactivate"}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(slot)}
-                          className="border-2 border-alert text-alert px-3 py-1 hover:bg-alert hover:text-bgBase uppercase"
-                        >
-                          Delete
-                        </button>
                       </div>
                     </td>
                   </tr>
