@@ -93,35 +93,7 @@ export function UserProfile() {
               <span className="text-emerald-600 font-bold">[ONLINE]</span>
             </div>
 
-            {(userRole === "owner" || userRole === "admin") && (
-              <div className="border-t border-b border-ink/20 my-1 py-1">
-                <div className="px-2 py-1 text-[8px] text-inkMuted">MANAGE:</div>
-
-                <button
-                  onClick={() => {
-                    setIsDropdownOpen(false);
-                    navigate("/slots/mine");
-                  }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-ink hover:bg-bgAlt transition-colors outline-none focus-visible:bg-bgAlt"
-                  role="menuitem"
-                >
-                  <Grid className="w-3.5 h-3.5 stroke-[2.5]" />
-                  My Slots
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsDropdownOpen(false);
-                    navigate("/pricing-rules");
-                  }}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-ink hover:bg-bgAlt transition-colors outline-none focus-visible:bg-bgAlt"
-                  role="menuitem"
-                >
-                  <Tag className="w-3.5 h-3.5 stroke-[2.5]" />
-                  Pricing Rules
-                </button>
-              </div>
-            )}
+            
 
                        
 

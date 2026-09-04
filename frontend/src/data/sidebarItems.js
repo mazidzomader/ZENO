@@ -27,17 +27,19 @@ export const sidebarItems = [
     icon: "Car",
     path: "/collections/vehicles"
   },
-  {
+    {
     id: "buildings",
     title: "Buildings",
     icon: "Building",
-    path: "/collections/buildings"
+    path: "/slots/mine",
+    roles: ["owner", "admin"], // now points to the My Slots page
   },
   {
-    id: "parkingslots",
-    title: "Parking Slots",
-    icon: "Grid",
-    path: "/collections/parkingslots"
+    id: "pricingrules",
+    title: "Pricing Rules",
+    icon: "Tag",
+    path: "/pricing-rules",
+    roles: ["owner", "admin"],
   },
   {
     id: "bookings",
