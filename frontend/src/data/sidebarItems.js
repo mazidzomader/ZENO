@@ -12,6 +12,15 @@ export const sidebarItems = [
     icon: "LayoutDashboard",
     path: "/dashboard"
   },
+
+  {
+    id: "browseslots",
+    title: "Browse Slots",
+    icon: "Search",
+    path: "/slots/browse",
+    roles: ["renter"], // only visible to renter
+  },
+
   {
     id: "vehicles",
     title: "Vehicles",
