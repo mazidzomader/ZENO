@@ -1,5 +1,12 @@
 export const sidebarItems = [
   {
+    id: "admin",
+    title: "Admin Panel",
+    icon: "Shield",
+    path: "/admin",
+    roles: ["admin"], // only visible to admin
+  },
+  {
     id: "dashboard",
     title: "Dashboard",
     icon: "LayoutDashboard",

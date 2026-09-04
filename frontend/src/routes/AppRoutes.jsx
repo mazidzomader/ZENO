@@ -36,6 +36,9 @@ import CheckInOutPage from '../pages/CheckInOutPage';
 // Feature 17 — Notification and Alert System
 import NotificationsPage from '../pages/NotificationsPage';
 
+// Feature 12 — Admin Control Panel
+import AdminPanel from "../pages/AdminPanel";
+
 // Feature — Invoice Generation
 import { InvoiceList, InvoiceView } from "../pages/InvoicePage";
 
@@ -118,7 +121,10 @@ function AppRoutes() {
         {/* Feature 17 — Notification and Alert System */}
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/collections/notifications" element={<Navigate to="/notifications" replace />} />
-        
+
+        {/* Feature 12 — Admin Control Panel */}
+        <Route path="/admin" element={<AdminPanel />} />
+
         {/* Feature — Payments (Stripe, Isolated) */}
         <Route path="/payments" element={<PaymentsPage />} />
 

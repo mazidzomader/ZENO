@@ -17,6 +17,10 @@ const protect = async (req, res, next) => {
 
       // Get user (excluding password)
       req.user = await User.findById(decoded.id).select("-password");
+      
+      // Check if user exists and is active
+      if (!req.user) {return res.status(401).json({ message: "User not found." });}
+      if (!req.user.isActive) {return res.status(403).json({ message: "Account suspended." });}
 
       next();
     } else {

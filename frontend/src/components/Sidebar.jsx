@@ -7,10 +7,17 @@ import { SearchBar } from "./SearchBar";
 import { SidebarItem } from "./SidebarItem";
 import { SidebarGroup } from "./SidebarGroup";
 import { UserProfile } from "./UserProfile";
+import { useAuth } from "../context/AuthContext";
 
 export function Sidebar() {
   const { isCollapsed, isMobileOpen, setIsMobileOpen, searchQuery } = useSidebar();
+  const { user } = useAuth();
 
+  // Filter items based on user role
+  const visibleItems = sidebarItems.filter((item) => { // <-- CHANGE 3
+    if (item.roles) {return user && item.roles.includes(user.role);}
+    return true;});
+    
   // Helper to filter sidebar items recursively
   const getFilteredItems = (items, query) => {
     if (!query) return items;
@@ -39,7 +46,7 @@ export function Sidebar() {
     }, []);
   };
 
-  const filteredItems = getFilteredItems(sidebarItems, searchQuery);
+  const filteredItems = getFilteredItems(visibleItems, searchQuery);
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-bgBase text-ink font-mono">
