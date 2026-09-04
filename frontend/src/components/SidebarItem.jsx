@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import * as Icons from "lucide-react";
 import { useSidebar } from "../hooks/useSidebar";
 
+
 export function SidebarItem({ item, isSubmenuItem = false }) {
   const { isCollapsed } = useSidebar();
   const location = useLocation();
