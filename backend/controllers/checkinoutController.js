@@ -22,7 +22,7 @@ exports.checkIn = async (req, res) => {
     const booking = await Booking.findOne({
       _id: bookingId,
       renterId: userId,
-      status: { $in: ['confirmed', 'active'] }, // adjust to your status names
+      status: { $in: ['confirmed', 'active'] },
     });
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found or not eligible for check-in.' });
@@ -47,8 +47,14 @@ exports.checkIn = async (req, res) => {
     }
     await record.save();
 
-    // Optionally update booking status to 'active' or 'checked-in'
+    // Update booking status to 'active'
     await Booking.findByIdAndUpdate(bookingId, { status: 'active' });
+
+    // ── SLOT STATUS SYNC ──
+    // Move the slot from "reserved" (booked but renter not yet on-site) to
+    // "occupied" (renter has physically checked in), so slot availability
+    // reflects real-world occupancy.
+    await Slot.findByIdAndUpdate(booking.slotId, { status: 'occupied' });
 
     res.status(200).json({ message: 'Check-in successful', record });
   } catch (err) {
@@ -88,6 +94,16 @@ exports.checkOut = async (req, res) => {
     // Update booking status to 'completed'
     await Booking.findByIdAndUpdate(bookingId, { status: 'completed' });
 
+    // ── SLOT STATUS SYNC ──
+    // Free the slot back up now that the renter has left, so it becomes
+    // bookable again. Skip if an owner deliberately deactivated the slot
+    // while the booking was in progress.
+    const slotForRelease = await Slot.findById(booking.slotId);
+    if (slotForRelease && slotForRelease.status !== 'inactive') {
+      slotForRelease.status = 'available';
+      await slotForRelease.save();
+    }
+
     // ── OVERSTAY DETECTION ──
     const bookedEnd = new Date(booking.endTime);
     let penalty = null;
@@ -110,7 +126,7 @@ exports.checkOut = async (req, res) => {
         notes: `Overstay of ${overstayMinutes} minutes beyond booked end time.`,
       });
       await penalty.save();
-      
+
       const slot = await Slot.findById(booking.slotId);
       await createNotification({
         userId: userId,
@@ -120,8 +136,6 @@ exports.checkOut = async (req, res) => {
         relatedId: booking._id,
         sendEmail: true,
       });
-      // Optionally update booking's totalAmount to include penalty
-      // (We'll keep it separate, but you can add if needed)
     }
 
     res.status(200).json({

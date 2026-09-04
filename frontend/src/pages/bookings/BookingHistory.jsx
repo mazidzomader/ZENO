@@ -19,6 +19,10 @@ function formatAmount(value) {
   return `$${amount.toLocaleString()}`;
 }
 
+// Statuses a renter/admin is still allowed to cancel from, per the backend's
+// cancelBooking guard (only "cancelled" and "completed" are blocked).
+const CANCELLABLE_STATUSES = ["pending", "confirmed", "active"];
+
 function BookingHistory() {
   const [bookings, setBookings] = useState([]);
   const [status, setStatus] = useState("all");
@@ -29,6 +33,7 @@ function BookingHistory() {
   const [error, setError] = useState("");
   const [cancellingId, setCancellingId] = useState(null);
   const [actionError, setActionError] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -96,6 +101,10 @@ function BookingHistory() {
     }
   };
 
+  const toggleExpanded = (bookingId) => {
+    setExpandedId((current) => (current === bookingId ? null : bookingId));
+  };
+
   return (
     <main className="p-6 md:p-10">
       <header className="border-b-4 border-black pb-5">
@@ -129,6 +138,7 @@ function BookingHistory() {
               <option value="all">All statuses</option>
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
+              <option value="active">Active</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
@@ -227,56 +237,126 @@ function BookingHistory() {
                   <th className="p-3">End</th>
                   <th className="p-3">Status</th>
                   <th className="p-3">Total</th>
+                  <th className="p-3">Pricing</th>
                   <th className="p-3">Actions</th>
                 </tr>
               </thead>
 
               <tbody>
-                {bookings.map((booking) => (
-                  <tr
-                    key={booking._id}
-                    className="border-b border-black font-mono text-xs"
-                  >
-                    <td className="p-3">
-                      {String(booking._id || "—")}
-                    </td>
+                {bookings.map((booking) => {
+                  const snapshot = booking.pricingSnapshot;
+                  const isExpanded = expandedId === booking._id;
 
-                    <td className="p-3">
-                      {String(booking.slotId || "—")}
-                    </td>
+                  return (
+                    <>
+                      <tr
+                        key={booking._id}
+                        className="border-b border-black font-mono text-xs"
+                      >
+                        <td className="p-3">
+                          {String(booking._id || "—")}
+                        </td>
 
-                    <td className="p-3">
-                      {formatDateTime(booking.startTime)}
-                    </td>
+                        <td className="p-3">
+                          {String(booking.slotId?._id || booking.slotId || "—")}
+                        </td>
 
-                    <td className="p-3">
-                      {formatDateTime(booking.endTime)}
-                    </td>
+                        <td className="p-3">
+                          {formatDateTime(booking.startTime)}
+                        </td>
 
-                    <td className="p-3 font-bold uppercase">
-                      {booking.status || "Unknown"}
-                    </td>
+                        <td className="p-3">
+                          {formatDateTime(booking.endTime)}
+                        </td>
 
-                    <td className="p-3 font-bold">
-                      {formatAmount(booking.totalAmount)}
-                    </td>
+                        <td className="p-3 font-bold uppercase">
+                          {booking.status || "Unknown"}
+                        </td>
 
-                    <td className="p-3">
-                      {booking.status === "confirmed" ? (
-                        <button
-                          type="button"
-                          onClick={() => handleCancel(booking._id)}
-                          disabled={cancellingId === booking._id}
-                          className="border-2 border-red-700 px-3 py-1 font-bold uppercase text-red-700 hover:bg-red-700 hover:text-white disabled:opacity-60"
-                        >
-                          {cancellingId === booking._id ? "..." : "Cancel"}
-                        </button>
-                      ) : (
-                        <span className="text-gray-400">—</span>
+                        <td className="p-3 font-bold">
+                          {formatAmount(booking.totalAmount)}
+                        </td>
+
+                        <td className="p-3">
+                          {snapshot ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleExpanded(booking._id)}
+                              className="underline font-bold uppercase"
+                            >
+                              {isExpanded ? "Hide" : "View"}
+                            </button>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+
+                        <td className="p-3">
+                          {CANCELLABLE_STATUSES.includes(booking.status) ? (
+                            <button
+                              type="button"
+                              onClick={() => handleCancel(booking._id)}
+                              disabled={cancellingId === booking._id}
+                              className="border-2 border-red-700 px-3 py-1 font-bold uppercase text-red-700 hover:bg-red-700 hover:text-white disabled:opacity-60"
+                            >
+                              {cancellingId === booking._id ? "..." : "Cancel"}
+                            </button>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+
+                      {isExpanded && snapshot && (
+                        <tr key={`${booking._id}-detail`} className="border-b border-black bg-gray-50">
+                          <td colSpan={8} className="p-4 font-mono text-xs">
+                            <div className="flex flex-wrap gap-6">
+                              <div>
+                                <p className="text-gray-500 uppercase text-[10px]">Base rate / hr</p>
+                                <p className="font-bold">${snapshot.basePrice}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500 uppercase text-[10px]">
+                                  Effective rate / hr
+                                </p>
+                                <p className="font-bold">${snapshot.effectiveHourlyRate}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500 uppercase text-[10px]">Duration</p>
+                                <p className="font-bold">{snapshot.durationHours} hr(s)</p>
+                              </div>
+                            </div>
+
+                            {snapshot.appliedRules?.length > 0 ? (
+                              <div className="mt-3 space-y-1">
+                                <p className="text-gray-500 uppercase text-[10px] mb-1">
+                                  Applied pricing rules
+                                </p>
+                                {snapshot.appliedRules.map((r) => (
+                                  <div key={r.ruleId} className="flex justify-between max-w-md">
+                                    <span>{r.name}</span>
+                                    <span>
+                                      {r.adjustmentType === "percentage"
+                                        ? `${r.adjustmentValue > 0 ? "+" : ""}${r.adjustmentValue}%`
+                                        : `${r.adjustmentValue > 0 ? "+$" : "-$"}${Math.abs(
+                                            r.adjustmentValue
+                                          )}`}
+                                      {" "}(${r.priceBefore} &rarr; ${r.priceAfter})
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-3 text-gray-500 uppercase text-[10px]">
+                                No dynamic pricing rules applied — base rate charged.
+                              </p>
+                            )}
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                  </tr>
-                ))}
+                    </>
+                  );
+                })}
               </tbody>
             </table>
           </div>

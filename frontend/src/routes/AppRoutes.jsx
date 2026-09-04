@@ -1,6 +1,7 @@
 import BrowseSlots from "../pages/slots/BrowseSlots";
 import { Routes, Route, Navigate } from "react-router-dom";
 import BookingHistory from "../pages/bookings/BookingHistory";
+import OwnerBookings from "../pages/bookings/OwnerBookings";
 
 import Home from "../pages/Home";
 import Login from "../pages/Login";
@@ -77,6 +78,9 @@ function AppRoutes() {
         {/* Feature 06 — Booking History */}
         <Route path="/bookings/history" element={<BookingHistory />} />
 
+        {/* Owner — see who's booked into their slots */}
+        <Route path="/bookings/owner" element={<OwnerBookings />} />
+
         {/* Feature 07 — Navigation */}
         <Route path="/navigation" element={<Navigation />} />
 
@@ -91,11 +95,6 @@ function AppRoutes() {
         <Route path="/dashboard" element={<Dashboard />} />
 
         {/* Feature 13 — Slot CRUD Management */}
-        <Route path="/slots/mine" element={<MySlots />} />
-        <Route path="/slots/new" element={<SlotForm />} />
-        <Route path="/slots/:id/edit" element={<SlotForm />} />
-        <Route path="/slots/bulk" element={<BulkSlotForm />} />
-                {/* Feature 13 — Slot CRUD Management */}
         <Route path="/slots/mine" element={<MySlots />} />
         <Route path="/slots/new" element={<SlotForm />} />
         <Route path="/slots/:id/edit" element={<SlotForm />} />

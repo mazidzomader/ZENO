@@ -2,11 +2,16 @@ const mongoose = require("mongoose");
 const Booking = require("../models/Booking");
 const Slot = require("../models/Slot");
 const { createNotification } = require('../services/notificationService');
+const { computeSlotPrice } = require("../utils/pricingEngine");
 
 // @desc    Create a booking (reserve a slot) for the logged-in renter
 // @route   POST /api/bookings
 // @access  Private (renter, admin)
 const createBooking = async (req, res) => {
+  // Tracks whether we've already flipped the slot to "reserved", so we can
+  // roll it back to "available" if anything fails after that point.
+  let reservedSlot = null;
+
   try {
     const { slotId, vehicleId, startTime, endTime } = req.body;
 
@@ -37,9 +42,9 @@ const createBooking = async (req, res) => {
       return res.status(404).json({ message: "Slot not found." });
     }
 
-    // Because a slot only carries a single status field (not a calendar of
-    // time ranges), a slot can only be booked while it is "available".
-    // This is what prevents double-booking the same slot.
+    // Fast, friendly early check. The real guard against double-booking is
+    // the atomic findOneAndUpdate further down — this is just so a slot
+    // that's obviously unavailable fails fast with a clear message.
     if (slot.status !== "available") {
       return res.status(409).json({
         message: `This slot is currently "${slot.status}" and cannot be booked.`,
@@ -62,9 +67,38 @@ const createBooking = async (req, res) => {
       }
     }
 
-    // Simple duration-based pricing: round up to the next full hour.
+    // ── DYNAMIC PRICING ──
+    // Ask the pricing engine for the effective hourly rate at booking start
+    // time — after every matching rule (slot type, floor, day/time window,
+    // live demand) has been applied — instead of trusting the slot's flat
+    // base pricePerHour. This is what connects Dynamic Pricing to what a
+    // renter is actually charged.
+    let pricingResult;
+    try {
+      pricingResult = await computeSlotPrice(slot, { unit: "hour", datetime: start });
+    } catch (pricingError) {
+      return res.status(400).json({ message: pricingError.message });
+    }
+
     const durationHours = Math.ceil((end - start) / (1000 * 60 * 60));
-    const totalAmount = durationHours * (slot.pricePerHour || 0);
+    const totalAmount = Math.round(durationHours * pricingResult.finalPrice * 100) / 100;
+
+    // ── ATOMIC RESERVATION ──
+    // Re-check availability and flip status to "reserved" in a single
+    // findOneAndUpdate. If two requests race for the same slot, only the
+    // first one's update matches the { status: "available" } filter — the
+    // second gets null back instead of silently double-booking the slot.
+    reservedSlot = await Slot.findOneAndUpdate(
+      { _id: slotId, status: "available" },
+      { status: "reserved" },
+      { new: true }
+    );
+
+    if (!reservedSlot) {
+      return res.status(409).json({
+        message: "This slot was just booked by someone else. Please choose another.",
+      });
+    }
 
     const booking = await Booking.create({
       renterId: req.user._id,
@@ -72,30 +106,40 @@ const createBooking = async (req, res) => {
       vehicleId: vehicleId || null,
       startTime: start,
       endTime: end,
-      status: "confirmed",
+      status: "pending", // awaiting payment — see routes/paymentRoutes.js
       totalAmount,
+      pricingSnapshot: {
+        unit: pricingResult.unit,
+        basePrice: pricingResult.basePrice,
+        effectiveHourlyRate: pricingResult.finalPrice,
+        durationHours,
+        appliedRules: pricingResult.appliedRules,
+      },
     });
 
-    // Mark the slot as reserved so nobody else can book it
-    slot.status = "reserved";
-    await slot.save();
-    
     await createNotification({
       userId: req.user._id,
-      type: 'booking_confirmed', // actually pending, but we'll rename later
+      type: 'booking_confirmed',
       title: 'Booking Pending Payment',
-      message: `You have successfully booked slot ${slot.slotNumber} from ${new Date(startTime).toLocaleString()} to ${new Date(endTime).toLocaleString()}. Please complete payment.`,
+      message: `You have successfully reserved slot ${reservedSlot.slotNumber} from ${start.toLocaleString()} to ${end.toLocaleString()}. Total: $${totalAmount}. Please complete payment.`,
       relatedId: booking._id,
       sendEmail: true,
-      });
+    });
 
     return res.status(201).json({
-      message: "Slot booked successfully.",
+      message: "Slot reserved successfully. Please complete payment to confirm your booking.",
       booking,
-      slot,
+      slot: reservedSlot,
     });
   } catch (error) {
     console.error("createBooking error:", error);
+
+    // Roll back the reservation if we'd already flipped the slot to
+    // "reserved" but failed to finish creating the booking.
+    if (reservedSlot) {
+      await Slot.findByIdAndUpdate(reservedSlot._id, { status: "available" }).catch(() => {});
+    }
+
     return res.status(500).json({ message: "Failed to create booking." });
   }
 };
@@ -121,6 +165,12 @@ const cancelBooking = async (req, res) => {
 
     if (booking.status === "cancelled") {
       return res.status(400).json({ message: "This booking is already cancelled." });
+    }
+
+    if (booking.status === "completed") {
+      return res.status(400).json({
+        message: "This booking has already been completed and cannot be cancelled.",
+      });
     }
 
     booking.status = "cancelled";
@@ -210,8 +260,57 @@ const getMyBookingHistory = async (req, res) => {
   }
 };
 
+// @desc    Get bookings for the logged-in owner's own slots — shows who has
+//          booked each slot (renter name/email/phone, vehicle, time range).
+//          Admins get bookings across every slot.
+//          Optional filters: ?slot=<slotId>&building=<buildingId>&status=<status>
+// @route   GET /api/bookings/owner
+// @access  Private (owner, admin)
+const getOwnerBookings = async (req, res) => {
+  try {
+    const { slot: slotIdParam, building: buildingIdParam, status } = req.query;
+
+    // Figure out which slot IDs this requester is allowed to see bookings
+    // for. Owners are restricted to slots they actually own; admins see
+    // everything (optionally narrowed by the same building/slot filters).
+    const slotFilter = {};
+    if (req.user.role !== "admin") {
+      slotFilter.owner = req.user._id;
+    }
+    if (buildingIdParam) {
+      slotFilter.building = buildingIdParam;
+    }
+    if (slotIdParam) {
+      slotFilter._id = slotIdParam;
+    }
+
+    const allowedSlots = await Slot.find(slotFilter).select("_id");
+    const allowedSlotIds = allowedSlots.map((s) => s._id);
+
+    if (slotIdParam && allowedSlotIds.length === 0) {
+      // Either the slot doesn't exist, or it exists but isn't owned by this
+      // requester — don't leak which, just say "not found".
+      return res.status(404).json({ message: "Slot not found or not owned by you." });
+    }
+
+    const filter = { slotId: { $in: allowedSlotIds } };
+    if (status) filter.status = status;
+
+    const bookings = await Booking.find(filter)
+      .populate("renterId", "name email phone")
+      .populate("vehicleId", "plateNumber type sizeClass")
+      .populate({ path: "slotId", populate: { path: "building", select: "name address" } })
+      .sort({ startTime: -1 });
+
+    res.status(200).json({ count: bookings.length, bookings });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getMyBookingHistory,
   createBooking,
   cancelBooking,
+  getOwnerBookings,
 };

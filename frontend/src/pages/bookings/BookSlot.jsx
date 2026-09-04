@@ -21,6 +21,11 @@ function BookSlot() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // Live dynamic-pricing estimate state
+  const [priceResult, setPriceResult] = useState(null);
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceError, setPriceError] = useState("");
+
   // Load the slot's details
   useEffect(() => {
     const fetchSlot = async () => {
@@ -51,21 +56,66 @@ function BookSlot() {
     fetchVehicles();
   }, []);
 
-  // Live estimate of total price based on the selected time range
-  const estimate = useMemo(() => {
-    if (!slot || !startTime || !endTime) return null;
-
+  // Basic client-side validity check for the chosen time range
+  const rangeIsValid = useMemo(() => {
+    if (!startTime || !endTime) return false;
     const start = new Date(startTime);
     const end = new Date(endTime);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+    return start < end;
+  }, [startTime, endTime]);
 
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-    if (start >= end) return null;
+  const durationHours = useMemo(() => {
+    if (!rangeIsValid) return 0;
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    return Math.ceil((end - start) / (1000 * 60 * 60));
+  }, [rangeIsValid, startTime, endTime]);
 
-    const hours = Math.ceil((end - start) / (1000 * 60 * 60));
-    const total = hours * (slot.pricePerHour || 0);
+  // Fetch the live dynamic price whenever the slot or time range changes.
+  // Debounced so we don't hammer the API on every keystroke.
+  useEffect(() => {
+    if (!id || !rangeIsValid) {
+      setPriceResult(null);
+      setPriceError("");
+      return;
+    }
 
-    return { hours, total };
-  }, [slot, startTime, endTime]);
+    const start = new Date(startTime);
+    let cancelled = false;
+
+    const timer = setTimeout(async () => {
+      setPriceLoading(true);
+      setPriceError("");
+      try {
+        const res = await API.get(`/pricing-rules/calculate/${id}`, {
+          params: { unit: "hour", datetime: start.toISOString() },
+        });
+        if (!cancelled) setPriceResult(res.data);
+      } catch (err) {
+        if (!cancelled) {
+          setPriceResult(null);
+          setPriceError(
+            err.response?.data?.message || "Could not calculate live price."
+          );
+        }
+      } finally {
+        if (!cancelled) setPriceLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [id, rangeIsValid, startTime]);
+
+  // Final estimate: effective hourly rate (after dynamic pricing rules) x hours
+  const estimate = useMemo(() => {
+    if (!priceResult || !durationHours) return null;
+    const total = Math.round(durationHours * priceResult.finalPrice * 100) / 100;
+    return { hours: durationHours, total, perHour: priceResult.finalPrice };
+  }, [priceResult, durationHours]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -84,14 +134,19 @@ function BookSlot() {
 
     setSubmitting(true);
     try {
-      await API.post("/bookings", {
+      const res = await API.post("/bookings", {
         slotId: id,
         vehicleId: vehicleId || undefined,
         startTime: new Date(startTime).toISOString(),
         endTime: new Date(endTime).toISOString(),
       });
 
-      setSuccess("Slot booked successfully! Redirecting to your bookings...");
+      const total = res.data?.booking?.totalAmount;
+      setSuccess(
+        `Slot reserved successfully${
+          total !== undefined ? ` — total $${total}` : ""
+        }! Redirecting to your bookings...`
+      );
       setTimeout(() => navigate("/bookings/history"), 1500);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to book this slot.");
@@ -163,7 +218,7 @@ function BookSlot() {
                 <p className="font-bold text-base mt-1 uppercase">{slot.type}</p>
               </div>
               <div className="border-2 border-ink p-3">
-                <p className="text-inkMuted uppercase">Rate / hr</p>
+                <p className="text-inkMuted uppercase">Base rate / hr</p>
                 <p className="font-bold text-base mt-1">${slot.pricePerHour}</p>
               </div>
               <div className="border-2 border-ink p-3">
@@ -250,12 +305,50 @@ function BookSlot() {
                   )}
                 </div>
 
-                {estimate && (
-                  <div className="border-2 border-ink bg-bgAlt p-4 flex items-center justify-between">
-                    <span className="uppercase font-bold text-xs">
-                      Estimated Total ({estimate.hours} hr{estimate.hours !== 1 ? "s" : ""})
-                    </span>
-                    <span className="text-xl font-bold">${estimate.total}</span>
+                {rangeIsValid && priceLoading && (
+                  <div className="border-2 border-ink bg-bgAlt p-4 font-mono text-xs uppercase text-inkMuted">
+                    [CALCULATING LIVE PRICE...]
+                  </div>
+                )}
+
+                {priceError && (
+                  <div className="border-2 border-alert text-alert font-mono font-bold uppercase text-xs px-3 py-2">
+                    [ERR] {priceError}
+                  </div>
+                )}
+
+                {estimate && !priceLoading && (
+                  <div className="border-2 border-ink bg-bgAlt p-4 font-mono text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="uppercase text-inkMuted">
+                        Effective rate / hr (after dynamic pricing)
+                      </span>
+                      <span className="font-bold">${estimate.perHour}</span>
+                    </div>
+
+                    {priceResult?.appliedRules?.length > 0 && (
+                      <div className="space-y-1 border-t border-ink/30 pt-2">
+                        {priceResult.appliedRules.map((r) => (
+                          <div key={r.ruleId} className="flex justify-between text-inkMuted">
+                            <span>{r.name}</span>
+                            <span>
+                              {r.adjustmentType === "percentage"
+                                ? `${r.adjustmentValue > 0 ? "+" : ""}${r.adjustmentValue}%`
+                                : `${r.adjustmentValue > 0 ? "+$" : "-$"}${Math.abs(
+                                    r.adjustmentValue
+                                  )}`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between border-t-2 border-ink pt-3">
+                      <span className="uppercase font-bold text-xs">
+                        Estimated Total ({estimate.hours} hr{estimate.hours !== 1 ? "s" : ""})
+                      </span>
+                      <span className="text-xl font-bold">${estimate.total}</span>
+                    </div>
                   </div>
                 )}
 

@@ -29,14 +29,29 @@ const bookingSchema = new mongoose.Schema(
       type: Date,
     },
 
+    // pending    -> booking created, slot reserved, awaiting payment
+    // confirmed  -> payment received (see routes/paymentRoutes.js)
+    // active     -> renter has checked in (see checkinoutController.js)
+    // completed  -> renter has checked out
+    // cancelled  -> cancelled by renter/admin before completion
     status: {
       type: String,
+      enum: ["pending", "confirmed", "active", "completed", "cancelled"],
+      default: "pending",
       index: true,
     },
 
     totalAmount: {
       type: Number,
       default: 0,
+    },
+
+    // Snapshot of how totalAmount was calculated at booking time, so the
+    // renter/owner can see exactly which dynamic pricing rules applied
+    // even if those rules are edited or deleted later.
+    pricingSnapshot: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
     },
 
     createdAt: {

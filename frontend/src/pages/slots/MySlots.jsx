@@ -169,6 +169,12 @@ function MySlots() {
           </h1>
           <div className="flex gap-3">
             <Link
+              to="/bookings/owner"
+              className="bg-bgBase text-ink font-mono font-bold uppercase text-xs px-5 py-3 border-2 border-ink hover:bg-highlight"
+            >
+              All Bookings
+            </Link>
+            <Link
               to="/buildings/manage"
               className="bg-bgBase text-ink font-mono font-bold uppercase text-xs px-5 py-3 border-2 border-ink hover:bg-highlight"
             >
@@ -425,6 +431,12 @@ function MySlots() {
                           className="border-2 border-ink px-3 py-1 hover:bg-highlight uppercase"
                         >
                           Pricing
+                        </Link>
+                        <Link
+                          to={`/bookings/owner?slot=${slot._id}`}
+                          className="border-2 border-ink px-3 py-1 hover:bg-highlight uppercase"
+                        >
+                          Bookings
                         </Link>
                       </div>
                     </td>
