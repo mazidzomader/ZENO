@@ -37,6 +37,40 @@ const assertBuildingOwnership = async (req, buildingId) => {
   return buildingDoc;
 };
 
+// Checks whether a rule (as it's currently defined) could apply to any slot
+// that right now has an active booking (status "reserved" or "occupied").
+// Mirrors the structural matching in utils/pricingEngine.js (building,
+// slotType, floor range) — day/time/demand are deliberately left out, since
+// this asks "could this rule affect a booked slot's price", not "does it
+// apply this exact second". Only relevant for rules that are currently
+// active, since inactive rules never factor into computeSlotPrice at all.
+const findActiveBookingConflict = async (rule) => {
+  if (!rule.active) return null;
+
+  const filter = {
+    owner: rule.owner,
+    status: { $in: ["reserved", "occupied"] },
+  };
+
+  if (rule.building) {
+    filter.building = rule.building;
+  }
+
+  if (rule.slotType && rule.slotType !== "all") {
+    filter.type = rule.slotType;
+  }
+
+  if (rule.floorFrom !== null && rule.floorFrom !== undefined) {
+    filter.floor = { ...(filter.floor || {}), $gte: rule.floorFrom };
+  }
+
+  if (rule.floorTo !== null && rule.floorTo !== undefined) {
+    filter.floor = { ...(filter.floor || {}), $lte: rule.floorTo };
+  }
+
+  return Slot.findOne(filter).select("_id slotNumber");
+};
+
 const validateRulePayload = (body) => {
   const {
     name,
@@ -202,6 +236,17 @@ const updatePricingRule = async (req, res) => {
         .json({ message: "You do not have permission to edit this rule." });
     }
 
+    // If this rule is currently live and actually reaching a slot with an
+    // active booking, block edits — changing adjustmentValue, timing, or
+    // scope right now would shift the live price out from under a booking
+    // in progress. Owners can still edit once the booking ends/cancels.
+    const conflict = await findActiveBookingConflict(rule);
+    if (conflict) {
+      return res.status(409).json({
+        message: `This rule currently applies to slot "${conflict.slotNumber}", which has an active booking. Editing is disabled until that booking ends or is cancelled.`,
+      });
+    }
+
     const validationError = validateRulePayload({
       name: req.body.name ?? rule.name,
       adjustmentType: req.body.adjustmentType ?? rule.adjustmentType,
@@ -277,6 +322,19 @@ const togglePricingRule = async (req, res) => {
         .json({ message: "You do not have permission to modify this rule." });
     }
 
+    // Only the "turning it off" direction is risky — a rule that's about to
+    // go inactive while it's live-affecting a booked slot's price. Turning
+    // a rule back on is always safe to allow.
+    const isTurningOff = rule.active;
+    if (isTurningOff) {
+      const conflict = await findActiveBookingConflict(rule);
+      if (conflict) {
+        return res.status(409).json({
+          message: `This rule currently applies to slot "${conflict.slotNumber}", which has an active booking. It cannot be deactivated until that booking ends or is cancelled.`,
+        });
+      }
+    }
+
     rule.active = !rule.active;
     await rule.save();
 
@@ -304,6 +362,13 @@ const deletePricingRule = async (req, res) => {
       return res
         .status(403)
         .json({ message: "You do not have permission to delete this rule." });
+    }
+
+    const conflict = await findActiveBookingConflict(rule);
+    if (conflict) {
+      return res.status(409).json({
+        message: `This rule currently applies to slot "${conflict.slotNumber}", which has an active booking. It cannot be deleted until that booking ends or is cancelled.`,
+      });
     }
 
     await rule.deleteOne();
