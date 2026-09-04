@@ -169,6 +169,12 @@ function MySlots() {
           </h1>
           <div className="flex gap-3">
             <Link
+              to="/buildings/manage"
+              className="bg-bgBase text-ink font-mono font-bold uppercase text-xs px-5 py-3 border-2 border-ink hover:bg-highlight"
+            >
+              Manage Buildings
+            </Link>
+            <Link
               to="/slots/bulk"
               className="bg-bgBase text-ink font-mono font-bold uppercase text-xs px-5 py-3 border-2 border-ink hover:bg-highlight"
             >
