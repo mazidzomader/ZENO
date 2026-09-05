@@ -8,6 +8,11 @@ const { computeSlotPrice } = require("../utils/pricingEngine");
 // from overlapping the same slot/time range.
 const ACTIVE_STATUSES = ["pending", "confirmed", "active"];
 
+// How long a renter has to pay (via Stripe or subscription hours) before an
+// unpaid "pending" booking is automatically cancelled and the slot is freed
+// again. Enforced by the sweep in utils/bookingExpiry.js.
+const PENDING_PAYMENT_MINUTES = 15;
+
 // @desc    Create a booking (reserve a slot) for the logged-in renter
 // @route   POST /api/bookings
 // @access  Private (renter, admin)
@@ -123,6 +128,7 @@ const createBooking = async (req, res) => {
       endTime: end,
       status: "pending", // awaiting payment — see routes/paymentRoutes.js
       totalAmount,
+      expiresAt: new Date(Date.now() + PENDING_PAYMENT_MINUTES * 60 * 1000),
       pricingSnapshot: {
         unit: pricingResult.unit,
         basePrice: pricingResult.basePrice,
@@ -164,7 +170,7 @@ const createBooking = async (req, res) => {
       userId: req.user._id,
       type: 'booking_confirmed',
       title: 'Booking Pending Payment',
-      message: `You have successfully reserved slot ${slot.slotNumber} from ${start.toLocaleString()} to ${end.toLocaleString()}. Total: $${totalAmount}. Please complete payment.`,
+      message: `You have successfully reserved slot ${slot.slotNumber} from ${start.toLocaleString()} to ${end.toLocaleString()}. Total: $${totalAmount}. Please complete payment within ${PENDING_PAYMENT_MINUTES} minutes or this reservation will be released.`,
       relatedId: createdBooking._id,
       sendEmail: true,
     });

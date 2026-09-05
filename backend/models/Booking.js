@@ -61,6 +61,23 @@ const bookingSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Only set for "pending" bookings. If payment (Stripe or subscription
+    // hours) isn't completed by this time, utils/bookingExpiry.js's sweep
+    // will cancel the booking and free the slot. Null for bookings that
+    // are already confirmed/active/completed/cancelled.
+    expiresAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+
+    // Set when a booking is cancelled automatically (e.g. "expired_unpaid")
+    // rather than by the renter/admin, so the reason isn't lost.
+    cancelReason: {
+      type: String,
+      default: null,
+    },
+
     createdAt: {
       type: Date,
       default: Date.now,

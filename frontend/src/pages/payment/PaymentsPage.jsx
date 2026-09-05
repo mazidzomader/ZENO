@@ -16,6 +16,19 @@ function formatAmount(value) {
   return `$${amount.toFixed(2)}`;
 }
 
+// Renders "Xm Ys" remaining until expiresAt, or "Expired" once the deadline
+// has passed. `now` is passed in (ticking every second from a parent
+// interval) so every row's countdown updates together.
+function formatTimeRemaining(expiresAt, now) {
+  if (!expiresAt) return "—";
+  const ms = new Date(expiresAt).getTime() - now;
+  if (ms <= 0) return "Expired";
+  const totalSeconds = Math.floor(ms / 1000);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins}m ${String(secs).padStart(2, "0")}s`;
+}
+
 export default function PaymentsPage() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +36,15 @@ export default function PaymentsPage() {
   const [paying, setPaying] = useState(null);
   const [usingHours, setUsingHours] = useState(null); // bookingId being paid via hours
   const [subscription, setSubscription] = useState(null); // active subscription
+  const [now, setNow] = useState(() => Date.now());
   const navigate = useNavigate();
+
+  // Ticks every second so the "Expires" countdown column stays live without
+  // needing to refetch from the server.
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, []);
 
   const fetchPending = useCallback(async () => {
     setLoading(true);
@@ -213,6 +234,7 @@ export default function PaymentsPage() {
                   <th className="p-3">End</th>
                   <th className="p-3">Duration</th>
                   <th className="p-3">Amount</th>
+                  <th className="p-3">Expires</th>
                   <th className="p-3">Action</th>
                 </tr>
               </thead>
@@ -236,6 +258,20 @@ export default function PaymentsPage() {
                         : "—"}
                     </td>
                     <td className="p-3 font-bold">{formatAmount(booking.totalAmount)}</td>
+                    <td className="p-3 font-bold">
+                      {(() => {
+                        const msLeft = booking.expiresAt
+                          ? new Date(booking.expiresAt).getTime() - now
+                          : null;
+                        const soon = msLeft !== null && msLeft > 0 && msLeft < 5 * 60 * 1000;
+                        const gone = msLeft !== null && msLeft <= 0;
+                        return (
+                          <span className={gone || soon ? "text-red-700" : ""}>
+                            {formatTimeRemaining(booking.expiresAt, now)}
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td className="p-3">
                       <div className="flex flex-col gap-2 sm:flex-row">
                         {/* Pay Now — always available */}

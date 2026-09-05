@@ -20,6 +20,7 @@ const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const checkinoutRoutes = require('./routes/checkinoutRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const adminRoutes = require("./routes/adminRoutes");
+const { expirePendingBookings } = require("./utils/bookingExpiry");
 dotenv.config();
 
 connectDB();
@@ -53,4 +54,16 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+
+  // Cancel unpaid "pending" bookings whose payment window has passed, and
+  // notify the renter. Runs once immediately (in case some expired while
+  // the server was down), then every 60 seconds.
+  expirePendingBookings().catch((err) =>
+    console.error("[booking-expiry] initial sweep failed:", err.message)
+  );
+  setInterval(() => {
+    expirePendingBookings().catch((err) =>
+      console.error("[booking-expiry] sweep failed:", err.message)
+    );
+  }, 60 * 1000);
 });

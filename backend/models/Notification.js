@@ -10,7 +10,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['booking_confirmed', 'booking_reminder', 'overstay_alert', 'payment_receipt', 'admin_message'],
+      enum: ['booking_confirmed', 'booking_reminder', 'overstay_alert', 'payment_receipt', 'admin_message', 'booking_expired'],
       required: true,
     },
     title: {

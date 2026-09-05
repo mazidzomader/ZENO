@@ -117,6 +117,15 @@ router.post("/create-checkout-session", protect, async (req, res) => {
       return res.status(400).json({ error: `Booking is already "${booking.status}". Only pending bookings can be paid.` });
     }
 
+    // The payment window may have just passed (see utils/bookingExpiry.js).
+    // Block starting a new checkout session for a booking that's about to
+    // be (or already was) auto-cancelled.
+    if (booking.expiresAt && new Date(booking.expiresAt) <= new Date()) {
+      return res.status(410).json({
+        error: "This booking's payment window has expired. The slot has been released — please book again.",
+      });
+    }
+
     // Check for existing payment (idempotency guard)
     const existing = await db.collection("payments").findOne({
       bookingId: toId(bookingId),
