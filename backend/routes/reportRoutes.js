@@ -1,181 +1,122 @@
-// ZENO — Reports and Export System (Feature 20)
-// Requires one extra dependency needs to install once:
-//   npm install pdfkit
-
-/* so this file never crashes with "OverwriteModelError" if a someone(teammate) */
-/* also defines Booking/Payment/ParkingSlot/Report elsewhere.*/
-//so this never overrides their schema.
-
 const express = require("express");
 const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
 const PDFDocument = require("pdfkit");
+const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
-
-
-const Report =
-  mongoose.models.Report ||
-  mongoose.model(
-    "Report",
-    new mongoose.Schema({
-      generatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      type: { type: String, enum: ["revenue", "booking_volume", "occupancy"], required: true },
-      format: { type: String, enum: ["csv", "pdf"], required: true },
-      buildingId: { type: mongoose.Schema.Types.ObjectId, ref: "Building", default: null },
-      dateFrom: { type: Date, required: true },
-      dateTo: { type: Date, required: true },
-      status: { type: String, enum: ["processing", "ready", "failed"], default: "processing" },
-      fileUrl: { type: String, default: null },
-      createdAt: { type: Date, default: Date.now }
-    })
-  );
-
-
-const Booking =
-  mongoose.models.Booking ||
-  mongoose.model(
-    "Booking",
-    new mongoose.Schema({
-      renterId: mongoose.Schema.Types.ObjectId,
-      slotId: mongoose.Schema.Types.ObjectId,
-      vehicleId: mongoose.Schema.Types.ObjectId,
-      startTime: Date,
-      endTime: Date,
-      status: String,
-      totalAmount: Number,
-      createdAt: { type: Date, default: Date.now }
-    })
-  );
-
-const Payment =
-  mongoose.models.Payment ||
-  mongoose.model(
-    "Payment",
-    new mongoose.Schema({
-      bookingId: mongoose.Schema.Types.ObjectId,
-      amount: Number,
-      method: String,
-      transactionRef: String,
-      status: String,
-      paidAt: { type: Date, default: Date.now }
-    })
-  );
-
-const ParkingSlot =
-  mongoose.models.ParkingSlot ||
-  mongoose.model(
-    "ParkingSlot",
-    new mongoose.Schema({
-      buildingId: mongoose.Schema.Types.ObjectId,
-      floor: Number,
-      slotNumber: String,
-      status: String
-    })
-  );
-
-/* CSV / PDF WRITERS                                                   */
-
 const OUT_DIR = path.join(__dirname, "..", "generated_reports");
 
-function escapeField(value) {
-  const str = value === null || value === undefined ? "" : String(value);
-  if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
-  return str;
+if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
+
+// ─── Models (safe, no overwrite) ────────────────────────────────────
+const Report = mongoose.models.Report || mongoose.model("Report", new mongoose.Schema({
+  generatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  type: { type: String, enum: ["revenue", "booking_volume", "occupancy"], required: true },
+  format: { type: String, enum: ["csv", "pdf"], required: true },
+  buildingId: { type: mongoose.Schema.Types.ObjectId, ref: "Building", default: null },
+  dateFrom: { type: Date, required: true },
+  dateTo: { type: Date, required: true },
+  status: { type: String, enum: ["processing", "ready", "failed"], default: "processing" },
+  fileUrl: { type: String, default: null },
+  createdAt: { type: Date, default: Date.now }
+}));
+
+const Booking = mongoose.models.Booking || mongoose.model("Booking", new mongoose.Schema({
+  renterId: mongoose.Schema.Types.ObjectId,
+  slotId: mongoose.Schema.Types.ObjectId,
+  startTime: Date, endTime: Date, status: String, totalAmount: Number
+}));
+
+const Payment = mongoose.models.Payment || mongoose.model("Payment", new mongoose.Schema({
+  bookingId: mongoose.Schema.Types.ObjectId,
+  amount: Number, method: String, transactionRef: String, status: String, paidAt: Date
+}));
+
+const ParkingSlot = mongoose.models.ParkingSlot || mongoose.model("ParkingSlot", new mongoose.Schema({
+  buildingId: mongoose.Schema.Types.ObjectId,
+  floor: Number, slotNumber: String, status: String
+}));
+
+// ─── CSV / PDF writers ──────────────────────────────────────────────
+function escapeCsv(value) {
+  const str = value == null ? "" : String(value);
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 }
 
 function writeCsv(filename, rows) {
-  if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
   const filePath = path.join(OUT_DIR, filename);
-
   if (!rows.length) {
     fs.writeFileSync(filePath, "NO_DATA_IN_RANGE\n");
     return filePath;
   }
-
   const headers = Object.keys(rows[0]);
-  const lines = [headers.join(",")];
-  for (const row of rows) lines.push(headers.map(h => escapeField(row[h])).join(","));
+  const lines = [
+    headers.join(","),
+    ...rows.map(row => headers.map(h => escapeCsv(row[h])).join(","))
+  ];
   fs.writeFileSync(filePath, lines.join("\n"));
   return filePath;
 }
 
 function writePdf(filename, title, rows) {
-  if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
-  const filePath = path.join(OUT_DIR, filename);
-
-  const doc = new PDFDocument({ margin: 40, size: "A4" });
-  const stream = fs.createWriteStream(filePath);
-  doc.pipe(stream);
-
-  doc.fontSize(18).text("ZENO", { continued: true }).fontSize(10).text("  /  REPORTS_AND_EXPORT");
-  doc.moveDown(0.5);
-  doc.fontSize(14).text(title);
-  doc.moveDown(1);
-
-  if (!rows.length) {
-    doc.fontSize(11).text("NO_DATA_IN_RANGE");
-  } else {
-    const headers = Object.keys(rows[0]);
-    const colWidth = (doc.page.width - 80) / headers.length;
-
-    doc.fontSize(9).font("Helvetica-Bold");
-    
-    let startY = doc.y;
-    let maxRowY = startY;
-
-    // 1. Draw Headers Safely
-    headers.forEach((h, i) => {
-      // { width: colWidth - 10 } enforces a 10px margin so text never touches horizontally
-      doc.text(h, 40 + i * colWidth, startY, { width: colWidth - 10 });
-      if (doc.y > maxRowY) maxRowY = doc.y;
-    });
-    
-    doc.y = maxRowY + 12; // Move down based on the tallest header
-    doc.font("Helvetica");
-
-    // 2. Draw Rows Safely
-    rows.forEach(row => {
-      // 3. Prevent text from falling off the bottom of the page
-      if (doc.y > doc.page.height - 80) {
-        doc.addPage();
-        doc.y = 40; // Reset cursor to top of new page
-      }
-
-      let currentY = doc.y;
-      let maxColY = currentY;
-
-      headers.forEach((h, i) => {
-        doc.text(String(row[h] ?? ""), 40 + i * colWidth, currentY, { width: colWidth - 10 });
-        if (doc.y > maxColY) maxColY = doc.y; // Find which column in this row is the tallest
-      });
-      
-      doc.y = maxColY + 8; // Move cursor past the tallest column + gap for the next row
-    });
-  }
-
-  doc.end();
   return new Promise((resolve, reject) => {
+    const filePath = path.join(OUT_DIR, filename);
+    const doc = new PDFDocument({ margin: 40, size: "A4" });
+    const stream = fs.createWriteStream(filePath);
+    doc.pipe(stream);
+
+    doc.fontSize(18).text("ZENO", { continued: true })
+       .fontSize(10).text("  /  REPORTS_AND_EXPORT");
+    doc.moveDown(0.5).fontSize(14).text(title).moveDown(1);
+
+    if (!rows.length) {
+      doc.fontSize(11).text("NO_DATA_IN_RANGE");
+    } else {
+      const headers = Object.keys(rows[0]);
+      const colWidth = (doc.page.width - 80) / headers.length;
+
+      let startY = doc.y, maxRowY = startY;
+      doc.fontSize(9).font("Helvetica-Bold");
+      headers.forEach((h, i) => {
+        doc.text(h, 40 + i * colWidth, startY, { width: colWidth - 10 });
+        if (doc.y > maxRowY) maxRowY = doc.y;
+      });
+      doc.y = maxRowY + 12;
+      doc.font("Helvetica");
+
+      rows.forEach(row => {
+        if (doc.y > doc.page.height - 80) { doc.addPage(); doc.y = 40; }
+        let currentY = doc.y, maxColY = currentY;
+        headers.forEach((h, i) => {
+          doc.text(String(row[h] ?? ""), 40 + i * colWidth, currentY, { width: colWidth - 10 });
+          if (doc.y > maxColY) maxColY = doc.y;
+        });
+        doc.y = maxColY + 8;
+      });
+    }
+
+    doc.end();
     stream.on("finish", () => resolve(filePath));
     stream.on("error", reject);
   });
 }
 
-
-async function buildRevenueRows(dateFrom, dateTo, buildingId) {
-  const bookingFilter = {};
+// ─── Report data builders ─────────────────────────────────────────────
+async function buildRevenueRows(from, to, buildingId) {
+  const filter = {};
   if (buildingId) {
     const slots = await ParkingSlot.find({ buildingId }).select("_id");
-    bookingFilter.slotId = { $in: slots.map(s => s._id) };
+    filter.slotId = { $in: slots.map(s => s._id) };
   }
-  const bookings = await Booking.find(bookingFilter).select("_id");
+  const bookings = await Booking.find(filter).select("_id");
   const bookingIds = bookings.map(b => b._id);
 
   const payments = await Payment.find({
     bookingId: { $in: bookingIds },
     status: "success",
-    paidAt: { $gte: dateFrom, $lte: dateTo }
+    paidAt: { $gte: from, $lte: to }
   }).sort({ paidAt: 1 });
 
   return payments.map(p => ({
@@ -187,13 +128,12 @@ async function buildRevenueRows(dateFrom, dateTo, buildingId) {
   }));
 }
 
-async function buildBookingVolumeRows(dateFrom, dateTo, buildingId) {
-  const filter = { startTime: { $gte: dateFrom, $lte: dateTo } };
+async function buildBookingVolumeRows(from, to, buildingId) {
+  const filter = { startTime: { $gte: from, $lte: to } };
   if (buildingId) {
     const slots = await ParkingSlot.find({ buildingId }).select("_id");
     filter.slotId = { $in: slots.map(s => s._id) };
   }
-
   const bookings = await Booking.find(filter).sort({ startTime: 1 });
   return bookings.map(b => ({
     bookingId: String(b._id),
@@ -205,35 +145,32 @@ async function buildBookingVolumeRows(dateFrom, dateTo, buildingId) {
   }));
 }
 
-async function buildOccupancyRows(dateFrom, dateTo, buildingId) {
+async function buildOccupancyRows(from, to, buildingId) {
   const slotFilter = buildingId ? { buildingId } : {};
   const slots = await ParkingSlot.find(slotFilter);
-  const rangeMs = dateTo.getTime() - dateFrom.getTime();
-  const rangeDays = Math.max(1, rangeMs / (1000 * 60 * 60 * 24));
+  const rangeDays = Math.max(1, (to - from) / (1000 * 60 * 60 * 24));
 
   const rows = [];
   for (const slot of slots) {
     const bookings = await Booking.find({
       slotId: slot._id,
       status: { $in: ["confirmed", "completed"] },
-      startTime: { $lte: dateTo },
-      endTime: { $gte: dateFrom }
+      startTime: { $lte: to },
+      endTime: { $gte: from }
     });
-
     let bookedMs = 0;
     for (const b of bookings) {
-      const start = b.startTime > dateFrom ? b.startTime : dateFrom;
-      const end = b.endTime < dateTo ? b.endTime : dateTo;
-      bookedMs += Math.max(0, end.getTime() - start.getTime());
+      const start = b.startTime > from ? b.startTime : from;
+      const end = b.endTime < to ? b.endTime : to;
+      bookedMs += Math.max(0, end - start);
     }
-
-    const occupancyPct = ((bookedMs / (rangeDays * 24 * 60 * 60 * 1000)) * 100).toFixed(1);
+    const pct = ((bookedMs / (rangeDays * 24 * 60 * 60 * 1000)) * 100).toFixed(1);
     rows.push({
       slotId: String(slot._id),
       slotNumber: slot.slotNumber,
       floor: slot.floor,
       currentStatus: slot.status,
-      occupancyPct: occupancyPct + "%"
+      occupancyPct: pct + "%"
     });
   }
   return rows;
@@ -245,21 +182,20 @@ const REPORT_BUILDERS = {
   occupancy: buildOccupancyRows
 };
 
+// ─── Routes ──────────────────────────────────────────────────────────
 
 // POST /api/reports/generate
-router.post("/generate", async (req, res) => {
+router.post("/generate", protect, async (req, res) => {
   try {
-    const { type, format, dateFrom, dateTo, buildingId, generatedBy } = req.body;
-
+    const { type, format, dateFrom, dateTo, buildingId } = req.body;
     if (!REPORT_BUILDERS[type]) return res.status(400).json({ error: "INVALID_REPORT_TYPE" });
     if (!["csv", "pdf"].includes(format)) return res.status(400).json({ error: "INVALID_FORMAT" });
     if (!dateFrom || !dateTo) return res.status(400).json({ error: "DATE_RANGE_REQUIRED" });
 
     const from = new Date(dateFrom);
     const to = new Date(dateTo);
-
     const report = await Report.create({
-      generatedBy: generatedBy || null,
+      generatedBy: req.user._id,
       type,
       format,
       buildingId: buildingId && buildingId !== "all" ? buildingId : null,
@@ -271,14 +207,12 @@ router.post("/generate", async (req, res) => {
     try {
       const rows = await REPORT_BUILDERS[type](from, to, report.buildingId);
       const baseName = `report_${report._id}`;
-
       let fileUrl;
       if (format === "csv") {
         fileUrl = path.basename(writeCsv(`${baseName}.csv`, rows));
       } else {
         fileUrl = path.basename(await writePdf(`${baseName}.pdf`, `${type.toUpperCase()} REPORT`, rows));
       }
-
       report.status = "ready";
       report.fileUrl = fileUrl;
       await report.save();
@@ -287,7 +221,6 @@ router.post("/generate", async (req, res) => {
       report.status = "failed";
       await report.save();
     }
-
     return res.status(201).json(report);
   } catch (err) {
     console.error(err);
@@ -295,11 +228,20 @@ router.post("/generate", async (req, res) => {
   }
 });
 
-// GET /api/reports
-router.get("/", async (req, res) => {
+// GET /api/reports – list reports (authenticated, role‑filtered)
+router.get("/", protect, async (req, res) => {
   try {
-    const reports = await Report.find().sort({ createdAt: -1 });
-    return res.json(reports);
+    const filter = {};
+    if (req.user.role !== "admin") {
+      filter.generatedBy = req.user._id;
+    }
+    const reports = await Report.find(filter).populate("generatedBy", "name").sort({ createdAt: -1 });
+    const enhanced = reports.map(r => {
+      const obj = r.toObject();
+      obj.fileExists = obj.fileUrl ? fs.existsSync(path.join(OUT_DIR, obj.fileUrl)) : false;
+      return obj;
+    });
+    return res.json(enhanced);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "SERVER_ERROR" });
@@ -307,15 +249,41 @@ router.get("/", async (req, res) => {
 });
 
 // GET /api/reports/:id/download
-router.get("/:id/download", async (req, res) => {
+router.get("/:id/download", protect, async (req, res) => {
   try {
     const report = await Report.findById(req.params.id);
     if (!report) return res.status(404).json({ error: "REPORT_NOT_FOUND" });
+    if (req.user.role !== "admin" && String(report.generatedBy) !== String(req.user._id)) {
+      return res.status(403).json({ error: "FORBIDDEN" });
+    }
     if (report.status !== "ready" || !report.fileUrl) {
       return res.status(409).json({ error: "REPORT_NOT_READY" });
     }
     const filePath = path.join(OUT_DIR, report.fileUrl);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "FILE_NOT_FOUND" });
+    }
     return res.download(filePath, report.fileUrl);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
+
+// DELETE /api/reports/:id
+router.delete("/:id", protect, async (req, res) => {
+  try {
+    const report = await Report.findById(req.params.id);
+    if (!report) return res.status(404).json({ error: "REPORT_NOT_FOUND" });
+    if (req.user.role !== "admin" && String(report.generatedBy) !== String(req.user._id)) {
+      return res.status(403).json({ error: "FORBIDDEN" });
+    }
+    if (report.fileUrl) {
+      const filePath = path.join(OUT_DIR, report.fileUrl);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    await report.deleteOne();
+    return res.json({ message: "Report deleted." });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "SERVER_ERROR" });
