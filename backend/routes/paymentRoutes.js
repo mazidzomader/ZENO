@@ -6,6 +6,8 @@
 //   POST /api/payments/create-checkout-session   → create Stripe Checkout session
 //   POST /api/payments/verify-session            → verify payment + write DB + generate invoice
 //   GET  /api/payments/status/:bookingId         → check if a booking has been paid
+//   POST /api/payments/create-extend-session     → "Extend my stay" — create Stripe session for +N hours
+//   POST /api/payments/verify-extend-session     → verify extension payment + push endTime out
 
 const express = require("express");
 const router = express.Router();
@@ -13,6 +15,9 @@ const Stripe = require("stripe");
 const mongoose = require("mongoose");
 const { protect } = require("../middleware/authMiddleware");
 const { createNotification } = require('../services/notificationService');
+const Booking = require("../models/Booking");
+const Slot = require("../models/Slot");
+const { computeSlotPrice } = require("../utils/pricingEngine");
 
 // Lazy Stripe initialization — deferred until first request so that
 // dotenv.config() in server.js has already populated process.env.
@@ -24,6 +29,13 @@ const getStripe = () => {
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 const toId = (id) => new mongoose.Types.ObjectId(String(id));
+
+// Statuses that count as a "live" booking blocking a slot/time range.
+// (Kept local to this file since paymentRoutes.js is meant to be self-contained.)
+const ACTIVE_STATUSES = ["pending", "confirmed", "active"];
+
+// Cap how many hours can be added in one "extend" action.
+const MAX_EXTEND_HOURS = 6;
 
 // Auto-incrementing invoice number helper
 async function nextInvoiceNumber(db) {
@@ -290,6 +302,268 @@ router.post("/verify-session", protect, async (req, res) => {
     }
   } catch (err) {
     console.error("verify-session error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/payments/create-extend-session ──────────────────────────────────
+// "Extend my stay" quick action, step 1 of 2.
+// Checks the next N hours are free on the same slot, computes the extra cost
+// via the same dynamic pricing engine used at booking time, and opens a
+// Stripe Checkout session for just that extra amount.
+// Body: { bookingId, hours }  (hours optional, defaults to 1, capped at MAX_EXTEND_HOURS)
+router.post("/create-extend-session", protect, async (req, res) => {
+  try {
+    const { bookingId, hours: rawHours } = req.body;
+
+    if (!bookingId) {
+      return res.status(400).json({ error: "bookingId is required." });
+    }
+
+    const hours = Math.max(1, Math.min(MAX_EXTEND_HOURS, parseInt(rawHours, 10) || 1));
+
+    const booking = await Booking.findOne({
+      _id: toId(bookingId),
+      renterId: toId(req.user._id),
+    });
+
+    if (!booking) {
+      return res.status(404).json({ error: "Booking not found or access denied." });
+    }
+
+    // Only a booking that's actually live right now (paid, or checked in)
+    // makes sense to extend. Pending/cancelled/completed bookings don't.
+    if (!["confirmed", "active"].includes(booking.status)) {
+      return res.status(400).json({
+        error: `Only confirmed or active bookings can be extended (current status: "${booking.status}").`,
+      });
+    }
+
+    const currentEnd = new Date(booking.endTime);
+    const newEnd = new Date(currentEnd.getTime() + hours * 60 * 60 * 1000);
+
+    // Make sure nobody else has booked the slot for the extension window.
+    const overlap = await Booking.findOne({
+      slotId: booking.slotId,
+      status: { $in: ACTIVE_STATUSES },
+      _id: { $ne: booking._id },
+      startTime: { $lt: newEnd },
+      endTime: { $gt: currentEnd },
+    });
+
+    if (overlap) {
+      return res.status(409).json({
+        error: "This slot is already booked right after your current stay, so it can't be extended right now.",
+      });
+    }
+
+    const slot = await Slot.findById(booking.slotId);
+    if (!slot) {
+      return res.status(404).json({ error: "Slot not found." });
+    }
+
+    // Same pricing engine used for regular bookings — dynamic pricing rules
+    // (time-of-day/demand surcharges etc.) still apply to the extra hour(s).
+    let pricingResult;
+    try {
+      pricingResult = await computeSlotPrice(slot, { unit: "hour", datetime: currentEnd });
+    } catch (pricingError) {
+      return res.status(400).json({ error: pricingError.message });
+    }
+
+    const extraAmount = Math.round(hours * pricingResult.finalPrice * 100) / 100;
+    const amountInCents = Math.round(extraAmount * 100);
+
+    const session = await getStripe().checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `ZENO Parking — Extend Booking #${String(booking._id).slice(-6).toUpperCase()}`,
+              description: `+${hours} hour(s) — new end time ${newEnd.toLocaleString()}`,
+            },
+            unit_amount: amountInCents,
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        type: "extend",
+        bookingId: String(booking._id),
+        renterId: String(req.user._id),
+        hours: String(hours),
+        newEndTime: newEnd.toISOString(),
+      },
+      success_url: `${process.env.CLIENT_URL}/payment/extend-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/bookings/history`,
+    });
+
+    res.json({
+      url: session.url,
+      sessionId: session.id,
+      extraAmount,
+      newEndTime: newEnd,
+      hours,
+    });
+  } catch (err) {
+    console.error("create-extend-session error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/payments/verify-extend-session ───────────────────────────────────
+// "Extend my stay" quick action, step 2 of 2.
+// Called from /payment/extend-success after the Stripe redirect.
+// Idempotent, and re-checks the slot is still free before actually pushing
+// endTime out (auto-refunds if someone else grabbed it in the meantime).
+router.post("/verify-extend-session", protect, async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: "sessionId is required." });
+    }
+
+    const session = await getStripe().checkout.sessions.retrieve(sessionId, {
+      expand: ["payment_intent"],
+    });
+
+    if (session.payment_status !== "paid") {
+      return res.status(402).json({ error: "Payment has not been completed." });
+    }
+
+    if (session.metadata?.type !== "extend") {
+      return res.status(400).json({ error: "This session is not an extension payment." });
+    }
+
+    const bookingId = session.metadata?.bookingId;
+    const renterId = session.metadata?.renterId;
+    const hours = parseInt(session.metadata?.hours, 10) || 1;
+    const newEndTime = new Date(session.metadata?.newEndTime);
+
+    if (!bookingId || !renterId || Number.isNaN(newEndTime.getTime())) {
+      return res.status(400).json({ error: "Session metadata missing or invalid." });
+    }
+
+    const db = mongoose.connection.db;
+
+    // Idempotency — return existing payment if already recorded
+    const existingPayment = await db
+      .collection("payments")
+      .findOne({ stripeSessionId: sessionId });
+
+    if (existingPayment) {
+      const existingInvoice = await db
+        .collection("invoices")
+        .findOne({ paymentId: existingPayment._id });
+
+      return res.json({
+        success: true,
+        alreadyProcessed: true,
+        payment: existingPayment,
+        invoice: existingInvoice,
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: "Booking not found." });
+    }
+
+    // Re-check the slot is still free for the extension window — someone
+    // could have booked it while the Stripe checkout was in progress.
+    const overlap = await Booking.findOne({
+      slotId: booking.slotId,
+      status: { $in: ACTIVE_STATUSES },
+      _id: { $ne: booking._id },
+      startTime: { $lt: newEndTime },
+      endTime: { $gt: booking.endTime },
+    });
+
+    if (overlap) {
+      // Can't honor the extension — refund automatically.
+      if (session.payment_intent?.id) {
+        await getStripe().refunds.create({ payment_intent: session.payment_intent.id });
+      }
+      return res.status(409).json({
+        error: "This slot was booked by someone else before your extension could be confirmed. You have been refunded.",
+      });
+    }
+
+    const extraAmount = session.amount_total / 100;
+
+    // ── 1. Insert payment record ──────────────────────────────────────────────
+    const paymentDoc = {
+      bookingId: toId(bookingId),
+      renterId: toId(renterId),
+      stripeSessionId: session.id,
+      stripePaymentIntentId: session.payment_intent?.id || null,
+      amount: extraAmount,
+      currency: session.currency.toUpperCase(),
+      method: "card",
+      type: "extension",
+      transactionRef: session.payment_intent?.id || session.id,
+      paidAt: new Date(),
+      status: "paid",
+    };
+
+    const paymentResult = await db.collection("payments").insertOne(paymentDoc);
+    const paymentId = paymentResult.insertedId;
+
+    // ── 2. Push the booking's endTime out and bump totalAmount ────────────────
+    const previousEnd = booking.endTime;
+    booking.endTime = newEndTime;
+    booking.totalAmount = Math.round((booking.totalAmount + extraAmount) * 100) / 100;
+    booking.pricingSnapshot = {
+      ...(booking.pricingSnapshot || {}),
+      extensions: [
+        ...((booking.pricingSnapshot && booking.pricingSnapshot.extensions) || []),
+        {
+          hours,
+          extraAmount,
+          extendedFrom: previousEnd,
+          extendedTo: newEndTime,
+          paidAt: new Date(),
+        },
+      ],
+    };
+    await booking.save();
+
+    // ── 3. Auto-generate a supplemental invoice ────────────────────────────────
+    const invoiceNumber = await nextInvoiceNumber(db);
+
+    const invoiceDoc = {
+      invoiceNumber,
+      bookingId: toId(bookingId),
+      renterId: toId(renterId),
+      paymentId,
+      note: `Stay extension: +${hours}hr, new end time ${newEndTime.toLocaleString()}`,
+      createdAt: new Date(),
+    };
+
+    const invoiceResult = await db.collection("invoices").insertOne(invoiceDoc);
+
+    res.json({
+      success: true,
+      alreadyProcessed: false,
+      booking,
+      payment: { ...paymentDoc, _id: paymentId },
+      invoice: { ...invoiceDoc, _id: invoiceResult.insertedId },
+    });
+
+    await createNotification({
+      userId: renterId,
+      type: 'payment_receipt',
+      title: 'Stay Extended',
+      message: `Your booking has been extended by ${hours} hour(s), now until ${newEndTime.toLocaleString()}. Extra charge: $${extraAmount}.`,
+      relatedId: bookingId,
+      sendEmail: true,
+    });
+  } catch (err) {
+    console.error("verify-extend-session error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
