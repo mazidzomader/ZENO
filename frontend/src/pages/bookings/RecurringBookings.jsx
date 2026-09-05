@@ -29,6 +29,14 @@ function formatPattern(series) {
   return `${days || "—"} · ${time}`;
 }
 
+// How many occurrences in this series are booked AND still unpaid — drives
+// whether the "Pay All" button shows up, and its label.
+function getPendingCount(series) {
+  return (series.occurrences || []).filter(
+    (o) => o.status === "booked" && o.bookingId?.status === "pending"
+  ).length;
+}
+
 function RecurringBookings() {
   const [series, setSeries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +44,7 @@ function RecurringBookings() {
   const [actionError, setActionError] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
+  const [payingSeriesId, setPayingSeriesId] = useState(null);
 
   const fetchSeries = useCallback(async () => {
     setLoading(true);
@@ -76,6 +85,21 @@ function RecurringBookings() {
       setActionError(err.response?.data?.message || "Failed to cancel recurring series.");
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  // Bundles every unpaid occurrence in this series into ONE Stripe Checkout
+  // session, instead of the renter paying each occurrence one by one from
+  // the Payments page.
+  const handlePaySeries = async (id) => {
+    setActionError("");
+    setPayingSeriesId(id);
+    try {
+      const res = await API.post("/payments/create-bulk-checkout-session", { seriesId: id });
+      window.location.href = res.data.url;
+    } catch (err) {
+      setActionError(err.response?.data?.error || "Could not start bulk payment. Please try again.");
+      setPayingSeriesId(null);
     }
   };
 
@@ -180,6 +204,7 @@ function RecurringBookings() {
                 {series.map((s) => {
                   const isExpanded = expandedId === s._id;
                   const slot = s.slotId;
+                  const pendingCount = getPendingCount(s);
                   return (
                     <>
                       <tr key={s._id} className="border-b border-black font-mono text-xs">
@@ -212,6 +237,16 @@ function RecurringBookings() {
                             >
                               {isExpanded ? "Hide" : "Details"}
                             </button>
+                            {s.status === "active" && pendingCount > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handlePaySeries(s._id)}
+                                disabled={payingSeriesId === s._id}
+                                className="border-2 border-black bg-black px-3 py-1 font-bold uppercase text-white hover:bg-white hover:text-black disabled:opacity-60"
+                              >
+                                {payingSeriesId === s._id ? "Redirecting…" : `Pay All (${pendingCount}) →`}
+                              </button>
+                            )}
                             {s.status === "active" && (
                               <button
                                 type="button"
