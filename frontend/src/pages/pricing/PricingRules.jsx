@@ -41,16 +41,7 @@ function ruleAppliesToSlot(rule, slot) {
   return true;
 }
 
-// A rule is "locked" (edit/pause/delete disabled) only when it's active AND
-// it reaches at least one slot that currently has an active booking. Mirrors
-// the backend's findActiveBookingConflict check in pricingRuleController.js.
-function ruleIsLocked(rule, slots) {
-  if (!rule.active) return false;
-  return slots.some(
-    (s) =>
-      ["reserved", "occupied"].includes(s.status) && ruleAppliesToSlot(rule, s)
-  );
-}
+
 
 // Returns the rule's conditions as an array of short tags, for rendering as
 // pills on the rule card (rather than one long joined string).
@@ -423,7 +414,7 @@ function PricingRules() {
         ) : (
           <div className="space-y-3">
             {visibleRules.map((rule) => {
-              const locked = ruleIsLocked(rule, slots);
+              
               return (
                 <div
                   key={rule._id}
@@ -441,12 +432,7 @@ function PricingRules() {
                           Inactive
                         </span>
                       )}
-                      {locked && (
-                        <span className="font-mono text-[10px] uppercase font-bold border-2 border-highlight text-highlight px-2 py-0.5">
-                          Locked — active booking
-                        </span>
-                      )}
-                    </div>
+                      </div>
                     <div className="flex flex-wrap gap-2">
                       {describeTags(rule).map((tag, i) => (
                         <span
@@ -468,38 +454,29 @@ function PricingRules() {
                       {formatAdjustment(rule)}
                     </span>
 
-                    {locked ? (
-                      <span
-                        className="border-2 border-inkMuted text-inkMuted px-3 py-2 font-mono text-[10px] font-bold uppercase cursor-not-allowed"
-                        title="This rule currently applies to a slot with an active booking. Edit/pause/delete are disabled until it ends or is cancelled."
+                                        <div className="flex gap-2">
+                      <Link
+                        to={`/pricing-rules/${rule._id}/edit`}
+                        title="Edit rule"
+                        className="border-2 border-ink p-2 hover:bg-ink hover:text-bgBase"
                       >
-                        Locked
-                      </span>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Link
-                          to={`/pricing-rules/${rule._id}/edit`}
-                          title="Edit rule"
-                          className="border-2 border-ink p-2 hover:bg-ink hover:text-bgBase"
-                        >
-                          <Pencil size={14} />
-                        </Link>
-                        <button
-                          onClick={() => handleToggle(rule)}
-                          title={rule.active ? "Deactivate rule" : "Activate rule"}
-                          className="border-2 border-ink px-3 py-2 font-mono text-[10px] font-bold uppercase hover:bg-highlight"
-                        >
-                          {rule.active ? "Pause" : "Resume"}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(rule)}
-                          title="Delete rule"
-                          className="border-2 border-alert text-alert p-2 hover:bg-alert hover:text-bgBase"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    )}
+                        <Pencil size={14} />
+                      </Link>
+                      <button
+                        onClick={() => handleToggle(rule)}
+                        title={rule.active ? "Deactivate rule" : "Activate rule"}
+                        className="border-2 border-ink px-3 py-2 font-mono text-[10px] font-bold uppercase hover:bg-highlight"
+                      >
+                        {rule.active ? "Pause" : "Resume"}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(rule)}
+                        title="Delete rule"
+                        className="border-2 border-alert text-alert p-2 hover:bg-alert hover:text-bgBase"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

@@ -1,7 +1,6 @@
 const PricingRule = require("../models/PricingRule");
 const Building = require("../models/Building");
 const Slot = require("../models/Slot");
-const Booking = require("../models/Booking");
 const { computeSlotPrice } = require("../utils/pricingEngine");
 
 // Small helper: only the rule's owner (or an admin) may manage it
@@ -36,53 +35,6 @@ const assertBuildingOwnership = async (req, buildingId) => {
   }
 
   return buildingDoc;
-};
-
-// Checks whether a rule (as it's currently defined) could apply to any slot
-// that right now has a live (pending/confirmed/active) booking which hasn't
-// ended yet. Mirrors the structural matching in utils/pricingEngine.js
-// (building, slotType, floor range) — day/time/demand are deliberately left
-// out, since this asks "could this rule affect a booked slot's price", not
-// "does it apply this exact second". Only relevant for rules that are
-// currently active, since inactive rules never factor into
-// computeSlotPrice at all.
-//
-// NOTE: this now checks the Booking collection directly rather than
-// Slot.status, since slot.status no longer reflects reservations — only
-// real-time physical presence.
-const findActiveBookingConflict = async (rule) => {
-  if (!rule.active) return null;
-
-  const slotFilter = { owner: rule.owner };
-
-  if (rule.building) {
-    slotFilter.building = rule.building;
-  }
-
-  if (rule.slotType && rule.slotType !== "all") {
-    slotFilter.type = rule.slotType;
-  }
-
-  if (rule.floorFrom !== null && rule.floorFrom !== undefined) {
-    slotFilter.floor = { ...(slotFilter.floor || {}), $gte: rule.floorFrom };
-  }
-
-  if (rule.floorTo !== null && rule.floorTo !== undefined) {
-    slotFilter.floor = { ...(slotFilter.floor || {}), $lte: rule.floorTo };
-  }
-
-  const matchingSlotIds = await Slot.find(slotFilter).distinct("_id");
-  if (matchingSlotIds.length === 0) return null;
-
-  const conflictBooking = await Booking.findOne({
-    slotId: { $in: matchingSlotIds },
-    status: { $in: ["pending", "confirmed", "active"] },
-    endTime: { $gt: new Date() },
-  }).populate("slotId", "slotNumber");
-
-  if (!conflictBooking) return null;
-
-  return { slotNumber: conflictBooking.slotId?.slotNumber || "unknown" };
 };
 
 const validateRulePayload = (body) => {
@@ -250,13 +202,6 @@ const updatePricingRule = async (req, res) => {
         .json({ message: "You do not have permission to edit this rule." });
     }
 
-    const conflict = await findActiveBookingConflict(rule);
-    if (conflict) {
-      return res.status(409).json({
-        message: `This rule currently applies to slot "${conflict.slotNumber}", which has an active booking. Editing is disabled until that booking ends or is cancelled.`,
-      });
-    }
-
     const validationError = validateRulePayload({
       name: req.body.name ?? rule.name,
       adjustmentType: req.body.adjustmentType ?? rule.adjustmentType,
@@ -332,16 +277,6 @@ const togglePricingRule = async (req, res) => {
         .json({ message: "You do not have permission to modify this rule." });
     }
 
-    const isTurningOff = rule.active;
-    if (isTurningOff) {
-      const conflict = await findActiveBookingConflict(rule);
-      if (conflict) {
-        return res.status(409).json({
-          message: `This rule currently applies to slot "${conflict.slotNumber}", which has an active booking. It cannot be deactivated until that booking ends or is cancelled.`,
-        });
-      }
-    }
-
     rule.active = !rule.active;
     await rule.save();
 
@@ -369,13 +304,6 @@ const deletePricingRule = async (req, res) => {
       return res
         .status(403)
         .json({ message: "You do not have permission to delete this rule." });
-    }
-
-    const conflict = await findActiveBookingConflict(rule);
-    if (conflict) {
-      return res.status(409).json({
-        message: `This rule currently applies to slot "${conflict.slotNumber}", which has an active booking. It cannot be deleted until that booking ends or is cancelled.`,
-      });
     }
 
     await rule.deleteOne();
