@@ -2,7 +2,8 @@
 // This file is fully self-contained. It does NOT modify any other route, controller, or model.
 //
 // Endpoints:
-//   GET  /api/payments/pending-bookings          → renter's unpaid pending bookings
+//   GET  /api/payments/pending-bookings          → renter's unpaid pending STANDALONE bookings (not part of a series)
+//   GET  /api/payments/pending-series            → renter's recurring series that have unpaid occurrences (for "Pay All")
 //   POST /api/payments/create-checkout-session   → create Stripe Checkout session
 //   POST /api/payments/verify-session            → verify payment + write DB + generate invoice
 //   GET  /api/payments/status/:bookingId         → check if a booking has been paid
@@ -61,7 +62,10 @@ async function nextInvoiceNumber(db) {
 }
 
 // ── GET /api/payments/pending-bookings ────────────────────────────────────────
-// Returns the renter's own bookings that are still "pending" (unpaid)
+// Returns the renter's own bookings that are still "pending" (unpaid) AND are
+// NOT part of a recurring series — those are paid via "Pay All" instead (see
+// GET /pending-series and POST /create-bulk-checkout-session), so they're
+// deliberately excluded here to avoid listing each occurrence separately.
 router.get("/pending-bookings", protect, async (req, res) => {
   try {
     const db = mongoose.connection.db;
@@ -71,6 +75,7 @@ router.get("/pending-bookings", protect, async (req, res) => {
       .find({
         renterId: toId(req.user._id),
         status: "pending",
+        seriesId: null,
       })
       .sort({ createdAt: -1 })
       .toArray();
@@ -90,6 +95,56 @@ router.get("/pending-bookings", protect, async (req, res) => {
     const unpaid = bookings.filter((b) => !paidSet.has(String(b._id)));
 
     res.json({ bookings: unpaid });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/payments/pending-series ──────────────────────────────────────────
+// Returns a per-series summary (slot, date range, pending count, total
+// amount) for every ACTIVE recurring series the renter owns that still has
+// at least one unpaid occurrence. Powers the "Pay All" row on the Payments
+// page — the individual occurrences themselves are intentionally NOT listed
+// (see /pending-bookings above).
+router.get("/pending-series", protect, async (req, res) => {
+  try {
+    const seriesList = await BookingSeries.find({
+      renterId: toId(req.user._id),
+      status: "active",
+    })
+      .populate({ path: "slotId", select: "slotNumber" })
+      .populate({ path: "occurrences.bookingId", select: "status startTime endTime totalAmount" })
+      .sort({ createdAt: -1 });
+
+    const result = seriesList
+      .map((series) => {
+        const pendingOccurrences = series.occurrences.filter(
+          (o) => o.status === "booked" && o.bookingId && o.bookingId.status === "pending"
+        );
+
+        if (pendingOccurrences.length === 0) return null;
+
+        const totalAmount = pendingOccurrences.reduce(
+          (sum, o) => sum + (o.bookingId.totalAmount || 0),
+          0
+        );
+
+        const dates = pendingOccurrences
+          .map((o) => o.bookingId.startTime)
+          .sort((a, b) => a - b);
+
+        return {
+          seriesId: series._id,
+          slotNumber: series.slotId?.slotNumber || null,
+          pendingCount: pendingOccurrences.length,
+          totalAmount: Math.round(totalAmount * 100) / 100,
+          earliestDate: dates[0] || null,
+          latestDate: dates[dates.length - 1] || null,
+        };
+      })
+      .filter(Boolean);
+
+    res.json({ series: result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

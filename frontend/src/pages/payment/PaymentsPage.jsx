@@ -31,9 +31,11 @@ function formatTimeRemaining(expiresAt, now) {
 
 export default function PaymentsPage() {
   const [bookings, setBookings] = useState([]);
+  const [seriesPending, setSeriesPending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [paying, setPaying] = useState(null);
+  const [payingSeriesId, setPayingSeriesId] = useState(null);
   const [usingHours, setUsingHours] = useState(null); // bookingId being paid via hours
   const [subscription, setSubscription] = useState(null); // active subscription
   const [now, setNow] = useState(() => Date.now());
@@ -50,12 +52,14 @@ export default function PaymentsPage() {
     setLoading(true);
     setError("");
     try {
-      const [bookingsRes, subRes] = await Promise.all([
+      const [bookingsRes, subRes, seriesRes] = await Promise.all([
         API.get("/payments/pending-bookings"),
         API.get("/subscriptions/my"),
+        API.get("/payments/pending-series"),
       ]);
       setBookings(Array.isArray(bookingsRes.data?.bookings) ? bookingsRes.data.bookings : []);
       setSubscription(subRes.data?.subscription || null);
+      setSeriesPending(Array.isArray(seriesRes.data?.series) ? seriesRes.data.series : []);
     } catch (err) {
       setError(err.response?.data?.error || "Failed to load pending bookings.");
     } finally {
@@ -76,6 +80,19 @@ export default function PaymentsPage() {
     } catch (err) {
       alert(err.response?.data?.error || "Could not initiate payment. Please try again.");
       setPaying(null);
+    }
+  };
+
+  // Bundles every unpaid occurrence in a recurring series into ONE Stripe
+  // Checkout session — same bulk endpoint used on the Recurring Bookings page.
+  const handlePaySeries = async (seriesId) => {
+    setPayingSeriesId(seriesId);
+    try {
+      const res = await API.post("/payments/create-bulk-checkout-session", { seriesId });
+      window.location.href = res.data.url;
+    } catch (err) {
+      alert(err.response?.data?.error || "Could not start bulk payment. Please try again.");
+      setPayingSeriesId(null);
     }
   };
 
@@ -119,8 +136,9 @@ export default function PaymentsPage() {
           Pay Bookings
         </h1>
         <p className="mt-3 max-w-3xl font-mono text-sm">
-          All your pending (unpaid) bookings are listed here. Click{" "}
-          <strong>Pay Now</strong> to complete payment via Stripe.
+          One-time bookings are listed below — click <strong>Pay Now</strong> to
+          complete payment via Stripe. Recurring series are paid all at once
+          using <strong>Pay All</strong>.
         </p>
       </header>
 
@@ -139,6 +157,13 @@ export default function PaymentsPage() {
           className="border-2 border-black bg-white px-5 py-3 font-mono text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors"
         >
           All Bookings →
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate("/bookings/recurring")}
+          className="border-2 border-black bg-white px-5 py-3 font-mono text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors"
+        >
+          Recurring Bookings →
         </button>
         <button
           type="button"
@@ -176,7 +201,60 @@ export default function PaymentsPage() {
         );
       })()}
 
-      {/* Pending Bookings Table */}
+      {/* Recurring Series — Pay All */}
+      {!loading && !error && seriesPending.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center justify-between border-b-2 border-black pb-3">
+            <h2 className="font-mono text-sm font-bold uppercase tracking-widest">
+              Recurring Series — Pay All
+            </h2>
+            <span className="font-mono text-xs font-bold uppercase">
+              {seriesPending.length} series
+            </span>
+          </div>
+
+          <div className="mt-5 overflow-x-auto border-2 border-black bg-white">
+            <table className="w-full border-collapse text-left">
+              <thead className="bg-black font-mono text-xs uppercase text-white">
+                <tr>
+                  <th className="p-3">Slot</th>
+                  <th className="p-3">Date Range</th>
+                  <th className="p-3">Pending</th>
+                  <th className="p-3">Total</th>
+                  <th className="p-3">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {seriesPending.map((s) => (
+                  <tr
+                    key={s.seriesId}
+                    className="border-b border-black font-mono text-xs hover:bg-gray-50"
+                  >
+                    <td className="p-3 font-bold">{s.slotNumber || "—"}</td>
+                    <td className="p-3">
+                      {formatDateTime(s.earliestDate)} → {formatDateTime(s.latestDate)}
+                    </td>
+                    <td className="p-3 font-bold">{s.pendingCount}</td>
+                    <td className="p-3 font-bold">{formatAmount(s.totalAmount)}</td>
+                    <td className="p-3">
+                      <button
+                        type="button"
+                        disabled={payingSeriesId === s.seriesId}
+                        onClick={() => handlePaySeries(s.seriesId)}
+                        className="border-2 border-black bg-black px-3 py-2 font-mono text-xs font-bold uppercase text-white hover:bg-white hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {payingSeriesId === s.seriesId ? "Redirecting…" : `Pay All (${s.pendingCount}) →`}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* Pending Bookings Table (one-time bookings only) */}
       <section className="mt-8">
         <div className="flex items-center justify-between border-b-2 border-black pb-3">
           <h2 className="font-mono text-sm font-bold uppercase tracking-widest">
@@ -203,8 +281,8 @@ export default function PaymentsPage() {
           </div>
         )}
 
-        {/* Empty */}
-        {!loading && !error && bookings.length === 0 && (
+        {/* Empty (nothing pending at all — neither one-time nor series) */}
+        {!loading && !error && bookings.length === 0 && seriesPending.length === 0 && (
           <div className="mt-5 border-2 border-dashed border-black p-10 text-center">
             <p className="font-mono text-sm font-bold uppercase">
               No pending bookings
