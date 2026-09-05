@@ -8,6 +8,8 @@
 //   GET  /api/payments/status/:bookingId         → check if a booking has been paid
 //   POST /api/payments/create-extend-session     → "Extend my stay" — create Stripe session for +N hours
 //   POST /api/payments/verify-extend-session     → verify extension payment + push endTime out
+//   POST /api/payments/create-bulk-checkout-session → pay every unpaid occurrence in a recurring series at once
+//   POST /api/payments/verify-bulk-session       → verify bulk series payment + write DB + generate invoices
 
 const express = require("express");
 const router = express.Router();
@@ -17,6 +19,7 @@ const { protect } = require("../middleware/authMiddleware");
 const { createNotification } = require('../services/notificationService');
 const Booking = require("../models/Booking");
 const Slot = require("../models/Slot");
+const BookingSeries = require("../models/BookingSeries");
 const { computeSlotPrice } = require("../utils/pricingEngine");
 
 // Lazy Stripe initialization — deferred until first request so that
@@ -36,6 +39,10 @@ const ACTIVE_STATUSES = ["pending", "confirmed", "active"];
 
 // Cap how many hours can be added in one "extend" action.
 const MAX_EXTEND_HOURS = 6;
+
+// Same payment window as a single booking (see recurringBookingController.js) —
+// used to give a bulk-series checkout a single, fresh, synced deadline.
+const PENDING_PAYMENT_MINUTES = 15;
 
 // Auto-incrementing invoice number helper
 async function nextInvoiceNumber(db) {
@@ -564,6 +571,265 @@ router.post("/verify-extend-session", protect, async (req, res) => {
     });
   } catch (err) {
     console.error("verify-extend-session error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/payments/create-bulk-checkout-session ─────────────────────────────
+// "Pay entire recurring series at once" — bundles every still-unpaid
+// occurrence in a BookingSeries into ONE Stripe Checkout session (one line
+// item per booking), instead of the renter paying each occurrence one by one.
+// Body: { seriesId }
+router.post("/create-bulk-checkout-session", protect, async (req, res) => {
+  try {
+    const { seriesId } = req.body;
+
+    if (!seriesId) {
+      return res.status(400).json({ error: "seriesId is required." });
+    }
+    if (!mongoose.Types.ObjectId.isValid(seriesId)) {
+      return res.status(400).json({ error: "Invalid seriesId." });
+    }
+
+    const series = await BookingSeries.findOne({
+      _id: toId(seriesId),
+      renterId: toId(req.user._id),
+    });
+
+    if (!series) {
+      return res.status(404).json({ error: "Recurring series not found or access denied." });
+    }
+
+    const bookingIds = series.occurrences
+      .filter((o) => o.status === "booked" && o.bookingId)
+      .map((o) => o.bookingId);
+
+    if (bookingIds.length === 0) {
+      return res.status(400).json({ error: "This series has no booked occurrences to pay for." });
+    }
+
+    const bookings = await Booking.find({
+      _id: { $in: bookingIds },
+      renterId: toId(req.user._id),
+      status: "pending",
+    }).sort({ startTime: 1 });
+
+    if (bookings.length === 0) {
+      return res.status(400).json({
+        error: "There is nothing pending to pay for in this series — every occurrence is already paid, cancelled, or expired.",
+      });
+    }
+
+    // Idempotency guard — exclude any occurrence that somehow already has a
+    // payment record even though its status still reads "pending".
+    const db = mongoose.connection.db;
+    const existingPayments = await db
+      .collection("payments")
+      .find({ bookingId: { $in: bookings.map((b) => b._id) } }, { projection: { bookingId: 1 } })
+      .toArray();
+    const paidSet = new Set(existingPayments.map((p) => String(p.bookingId)));
+    const payable = bookings.filter((b) => !paidSet.has(String(b._id)));
+
+    if (payable.length === 0) {
+      return res.status(400).json({ error: "Every occurrence in this series has already been paid." });
+    }
+
+    // Give the whole batch ONE synced payment window instead of each
+    // occurrence's own (possibly different) expiresAt — so the renter has a
+    // clean 15 minutes to complete a single checkout instead of racing
+    // several independent countdowns.
+    const newExpiry = new Date(Date.now() + PENDING_PAYMENT_MINUTES * 60 * 1000);
+    await Booking.updateMany(
+      { _id: { $in: payable.map((b) => b._id) } },
+      { $set: { expiresAt: newExpiry } }
+    );
+
+    const line_items = payable.map((b) => ({
+      price_data: {
+        currency: "usd",
+        product_data: {
+          name: `ZENO Parking — Booking #${String(b._id).slice(-6).toUpperCase()}`,
+          description: `${
+            b.startTime ? new Date(b.startTime).toLocaleString() : "—"
+          } → ${b.endTime ? new Date(b.endTime).toLocaleString() : "—"}`,
+        },
+        unit_amount: Math.round((b.totalAmount || 100) * 100),
+      },
+      quantity: 1,
+    }));
+
+    const session = await getStripe().checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items,
+      metadata: {
+        type: "bulk_series",
+        seriesId: String(series._id),
+        renterId: String(req.user._id),
+      },
+      success_url: `${process.env.CLIENT_URL}/payment/bulk-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/bookings/recurring`,
+    });
+
+    res.json({ url: session.url, sessionId: session.id, bookingCount: payable.length });
+  } catch (err) {
+    console.error("create-bulk-checkout-session error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/payments/verify-bulk-session ──────────────────────────────────────
+// Called from the frontend /payment/bulk-success page after redirect.
+// Idempotent — safe to call multiple times. Confirms every pending booking
+// that was part of the bulk checkout and writes one invoice per booking,
+// all sharing the same Stripe session/payment_intent.
+router.post("/verify-bulk-session", protect, async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: "sessionId is required." });
+    }
+
+    const session = await getStripe().checkout.sessions.retrieve(sessionId, {
+      expand: ["payment_intent"],
+    });
+
+    if (session.payment_status !== "paid") {
+      return res.status(402).json({ error: "Payment has not been completed." });
+    }
+
+    if (session.metadata?.type !== "bulk_series") {
+      return res.status(400).json({ error: "This session is not a bulk series payment." });
+    }
+
+    const seriesId = session.metadata?.seriesId;
+    const renterId = session.metadata?.renterId;
+
+    if (!seriesId || !renterId) {
+      return res.status(400).json({ error: "Session metadata missing." });
+    }
+
+    const db = mongoose.connection.db;
+
+    // Idempotency — if this session was already processed, return what was
+    // created before instead of charging/writing anything twice.
+    const existingPayments = await db
+      .collection("payments")
+      .find({ stripeSessionId: sessionId })
+      .toArray();
+
+    if (existingPayments.length > 0) {
+      const existingInvoices = await db
+        .collection("invoices")
+        .find({ paymentId: { $in: existingPayments.map((p) => p._id) } })
+        .toArray();
+
+      return res.json({
+        success: true,
+        alreadyProcessed: true,
+        payments: existingPayments,
+        invoices: existingInvoices,
+        count: existingPayments.length,
+      });
+    }
+
+    const series = await BookingSeries.findById(seriesId);
+    if (!series) {
+      return res.status(404).json({ error: "Recurring series not found." });
+    }
+
+    const bookingIds = series.occurrences
+      .filter((o) => o.status === "booked" && o.bookingId)
+      .map((o) => o.bookingId);
+
+    // Only bookings still "pending" get charged here — anything already
+    // confirmed/cancelled/expired between checkout creation and this call
+    // is left untouched.
+    const bookings = await Booking.find({
+      _id: { $in: bookingIds },
+      status: "pending",
+    });
+
+    if (bookings.length === 0) {
+      return res.status(400).json({
+        error: "No pending bookings were found for this series — they may already have been processed.",
+      });
+    }
+
+    const paymentDocs = [];
+    const invoiceDocs = [];
+
+    for (const booking of bookings) {
+      // Each booking's totalAmount is exactly what its Stripe line item was
+      // priced at when the session was created — totalAmount is never
+      // edited after booking creation anywhere else in this app.
+      const paymentDoc = {
+        bookingId: booking._id,
+        renterId: toId(renterId),
+        seriesId: series._id,
+        stripeSessionId: session.id,
+        stripePaymentIntentId: session.payment_intent?.id || null,
+        amount: booking.totalAmount,
+        currency: session.currency.toUpperCase(),
+        method: "card",
+        type: "bulk_series",
+        transactionRef: session.payment_intent?.id || session.id,
+        paidAt: new Date(),
+        status: "paid",
+      };
+      const paymentResult = await db.collection("payments").insertOne(paymentDoc);
+      const paymentId = paymentResult.insertedId;
+      paymentDocs.push({ ...paymentDoc, _id: paymentId });
+
+      await Booking.updateOne({ _id: booking._id }, { $set: { status: "confirmed" } });
+
+      const invoiceNumber = await nextInvoiceNumber(db);
+      const invoiceDoc = {
+        invoiceNumber,
+        bookingId: booking._id,
+        renterId: toId(renterId),
+        paymentId,
+        seriesId: series._id,
+        note: `Part of bulk payment for recurring series (${bookings.length} booking(s))`,
+        createdAt: new Date(),
+      };
+      const invoiceResult = await db.collection("invoices").insertOne(invoiceDoc);
+      invoiceDocs.push({ ...invoiceDoc, _id: invoiceResult.insertedId });
+    }
+
+    res.json({
+      success: true,
+      alreadyProcessed: false,
+      payments: paymentDocs,
+      invoices: invoiceDocs,
+      count: paymentDocs.length,
+    });
+
+    const totalPaid = session.amount_total / 100;
+    await createNotification({
+      userId: renterId,
+      type: "payment_receipt",
+      title: "Recurring Series Paid",
+      message: `Your payment of $${totalPaid.toFixed(2)} for ${bookings.length} booking(s) in your recurring series has been received. ${invoiceDocs.length} invoice(s) generated.`,
+      relatedId: series._id,
+      sendEmail: true,
+    });
+
+    // Notify the slot owner once, not per-occurrence.
+    const slot = await db.collection("parkingslots").findOne({ _id: series.slotId });
+    if (slot && slot.owner) {
+      await createNotification({
+        userId: slot.owner,
+        type: "booking_confirmed",
+        title: "Recurring Series Booking Confirmed",
+        message: `${bookings.length} booking(s) on your slot ${slot.slotNumber} have been paid via a recurring series.`,
+        relatedId: series._id,
+        sendEmail: false,
+      });
+    }
+  } catch (err) {
+    console.error("verify-bulk-session error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
