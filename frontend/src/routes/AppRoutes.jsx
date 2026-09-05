@@ -52,6 +52,7 @@ import PaymentsPage from "../pages/payment/PaymentsPage";
 import PaymentSuccess from "../pages/payment/PaymentSuccess";
 import PaymentCancel from "../pages/payment/PaymentCancel";
 
+import ExtendSuccess from "../pages/payment/ExtendSuccess";
 // Feature — Subscription Plans (Isolated)
 import SubscriptionPage from "../pages/subscription/SubscriptionPage";
 import SubscriptionSuccess from "../pages/subscription/SubscriptionSuccess";
@@ -141,7 +142,7 @@ function AppRoutes() {
       {/* Payment redirect pages — outside DashboardLayout (full-screen, no sidebar) */}
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/cancel" element={<PaymentCancel />} />
-
+      <Route path="/payment/extend-success" element={<ExtendSuccess />} />
       {/* Subscription redirect pages — outside DashboardLayout */}
       <Route path="/subscription/success" element={<SubscriptionSuccess />} />
       <Route path="/subscription/cancel" element={<SubscriptionCancel />} />
