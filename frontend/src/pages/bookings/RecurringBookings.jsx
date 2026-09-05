@@ -37,6 +37,31 @@ function getPendingCount(series) {
   ).length;
 }
 
+// Soonest payment deadline across a series' still-unpaid occurrences — same
+// 15-minute payment window used for one-time bookings (see
+// bookingController.js / recurringBookingController.js PENDING_PAYMENT_MINUTES).
+// After "Pay All" is clicked, create-bulk-checkout-session syncs every
+// occurrence to one fresh expiresAt, so this collapses to a single deadline.
+function getEarliestExpiry(series) {
+  const expiries = (series.occurrences || [])
+    .filter((o) => o.status === "booked" && o.bookingId?.status === "pending" && o.bookingId?.expiresAt)
+    .map((o) => new Date(o.bookingId.expiresAt).getTime())
+    .sort((a, b) => a - b);
+  return expiries[0] || null;
+}
+
+// Renders "Xm Ys" remaining until expiresAt (ms epoch), or "Expired" once
+// the deadline has passed. Mirrors formatTimeRemaining in PaymentsPage.jsx.
+function formatTimeRemaining(expiresAtMs, now) {
+  if (!expiresAtMs) return "—";
+  const ms = expiresAtMs - now;
+  if (ms <= 0) return "Expired";
+  const totalSeconds = Math.floor(ms / 1000);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins}m ${String(secs).padStart(2, "0")}s`;
+}
+
 function RecurringBookings() {
   const [series, setSeries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +70,14 @@ function RecurringBookings() {
   const [expandedId, setExpandedId] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [payingSeriesId, setPayingSeriesId] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Ticks every second so the "Expires" countdown column stays live without
+  // needing to refetch from the server — same approach as PaymentsPage.jsx.
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, []);
 
   const fetchSeries = useCallback(async () => {
     setLoading(true);
@@ -197,6 +230,7 @@ function RecurringBookings() {
                   <th className="p-3">Booked</th>
                   <th className="p-3">Skipped</th>
                   <th className="p-3">Created</th>
+                  <th className="p-3">Expires</th>
                   <th className="p-3">Actions</th>
                 </tr>
               </thead>
@@ -205,6 +239,10 @@ function RecurringBookings() {
                   const isExpanded = expandedId === s._id;
                   const slot = s.slotId;
                   const pendingCount = getPendingCount(s);
+                  const earliestExpiry = getEarliestExpiry(s);
+                  const msLeft = earliestExpiry !== null ? earliestExpiry - now : null;
+                  const soon = msLeft !== null && msLeft > 0 && msLeft < 5 * 60 * 1000;
+                  const gone = msLeft !== null && msLeft <= 0;
                   return (
                     <>
                       <tr key={s._id} className="border-b border-black font-mono text-xs">
@@ -228,6 +266,15 @@ function RecurringBookings() {
                         <td className="p-3 font-bold">{s.bookedCount}</td>
                         <td className="p-3 font-bold">{s.skippedCount}</td>
                         <td className="p-3">{formatDateTime(s.createdAt)}</td>
+                        <td className="p-3 font-bold">
+                          {pendingCount > 0 ? (
+                            <span className={gone || soon ? "text-red-700" : ""}>
+                              {formatTimeRemaining(earliestExpiry, now)}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
                         <td className="p-3">
                           <div className="flex flex-wrap items-center gap-2">
                             <button
@@ -263,7 +310,7 @@ function RecurringBookings() {
 
                       {isExpanded && (
                         <tr key={`${s._id}-detail`} className="border-b border-black bg-gray-50">
-                          <td colSpan={8} className="p-4 font-mono text-xs">
+                          <td colSpan={9} className="p-4 font-mono text-xs">
                             <p className="text-gray-500 uppercase text-[10px] mb-2">
                               Occurrence breakdown ({(s.occurrences || []).length} date(s))
                             </p>
@@ -271,6 +318,13 @@ function RecurringBookings() {
                               {(s.occurrences || []).map((o, i) => {
                                 const liveStatus =
                                   o.status === "booked" ? o.bookingId?.status || "unknown" : null;
+                                const occExpiresAtMs =
+                                  liveStatus === "pending" && o.bookingId?.expiresAt
+                                    ? new Date(o.bookingId.expiresAt).getTime()
+                                    : null;
+                                const occMsLeft = occExpiresAtMs !== null ? occExpiresAtMs - now : null;
+                                const occSoon = occMsLeft !== null && occMsLeft > 0 && occMsLeft < 5 * 60 * 1000;
+                                const occGone = occMsLeft !== null && occMsLeft <= 0;
                                 return (
                                   <div
                                     key={i}
@@ -292,6 +346,11 @@ function RecurringBookings() {
                                         ? `Reserved — ${liveStatus}`
                                         : `Skipped${o.reason ? ` (${o.reason})` : ""}`}
                                     </span>
+                                    {liveStatus === "pending" && (
+                                      <span className={`font-bold ${occGone || occSoon ? "text-red-700" : "text-gray-600"}`}>
+                                        Expires: {formatTimeRemaining(occExpiresAtMs, now)}
+                                      </span>
+                                    )}
                                   </div>
                                 );
                               })}

@@ -113,7 +113,7 @@ router.get("/pending-series", protect, async (req, res) => {
       status: "active",
     })
       .populate({ path: "slotId", select: "slotNumber" })
-      .populate({ path: "occurrences.bookingId", select: "status startTime endTime totalAmount" })
+      .populate({ path: "occurrences.bookingId", select: "status startTime endTime totalAmount expiresAt" })
       .sort({ createdAt: -1 });
 
     const result = seriesList
@@ -133,6 +133,16 @@ router.get("/pending-series", protect, async (req, res) => {
           .map((o) => o.bookingId.startTime)
           .sort((a, b) => a - b);
 
+        // Soonest payment deadline across this series' unpaid occurrences —
+        // powers the same "Xm Ys" countdown shown for one-time bookings.
+        // Once "Pay All" is clicked, create-bulk-checkout-session syncs every
+        // occurrence to one fresh expiresAt, so this naturally collapses to
+        // a single shared deadline at that point.
+        const expiries = pendingOccurrences
+          .map((o) => o.bookingId.expiresAt)
+          .filter(Boolean)
+          .sort((a, b) => new Date(a) - new Date(b));
+
         return {
           seriesId: series._id,
           slotNumber: series.slotId?.slotNumber || null,
@@ -140,6 +150,7 @@ router.get("/pending-series", protect, async (req, res) => {
           totalAmount: Math.round(totalAmount * 100) / 100,
           earliestDate: dates[0] || null,
           latestDate: dates[dates.length - 1] || null,
+          expiresAt: expiries[0] || null,
         };
       })
       .filter(Boolean);

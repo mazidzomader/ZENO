@@ -321,7 +321,7 @@ const getMyRecurringBookings = async (req, res) => {
   try {
     const series = await BookingSeries.find({ renterId: req.user._id })
       .populate({ path: "slotId", populate: { path: "building", select: "name address" } })
-      .populate({ path: "occurrences.bookingId", select: "status startTime endTime totalAmount" })
+      .populate({ path: "occurrences.bookingId", select: "status startTime endTime totalAmount expiresAt" })
       .sort({ createdAt: -1 });
 
     res.status(200).json({ count: series.length, series });
@@ -342,7 +342,7 @@ const getRecurringBookingDetail = async (req, res) => {
 
     const series = await BookingSeries.findById(id)
       .populate({ path: "slotId", populate: { path: "building", select: "name address" } })
-      .populate({ path: "occurrences.bookingId", select: "status startTime endTime totalAmount" });
+      .populate({ path: "occurrences.bookingId", select: "status startTime endTime totalAmount expiresAt" })
 
     if (!series) {
       return res.status(404).json({ message: "Recurring booking series not found." });

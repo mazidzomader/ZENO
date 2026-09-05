@@ -221,33 +221,48 @@ export default function PaymentsPage() {
                   <th className="p-3">Date Range</th>
                   <th className="p-3">Pending</th>
                   <th className="p-3">Total</th>
+                  <th className="p-3">Expires</th>
                   <th className="p-3">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {seriesPending.map((s) => (
-                  <tr
-                    key={s.seriesId}
-                    className="border-b border-black font-mono text-xs hover:bg-gray-50"
-                  >
-                    <td className="p-3 font-bold">{s.slotNumber || "—"}</td>
-                    <td className="p-3">
-                      {formatDateTime(s.earliestDate)} → {formatDateTime(s.latestDate)}
-                    </td>
-                    <td className="p-3 font-bold">{s.pendingCount}</td>
-                    <td className="p-3 font-bold">{formatAmount(s.totalAmount)}</td>
-                    <td className="p-3">
-                      <button
-                        type="button"
-                        disabled={payingSeriesId === s.seriesId}
-                        onClick={() => handlePaySeries(s.seriesId)}
-                        className="border-2 border-black bg-black px-3 py-2 font-mono text-xs font-bold uppercase text-white hover:bg-white hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {payingSeriesId === s.seriesId ? "Redirecting…" : `Pay All (${s.pendingCount}) →`}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {seriesPending.map((s) => {
+                  // Soonest deadline across the series' unpaid occurrences —
+                  // same "Xm Ys" countdown as the one-time bookings table.
+                  const msLeft = s.expiresAt
+                    ? new Date(s.expiresAt).getTime() - now
+                    : null;
+                  const soon = msLeft !== null && msLeft > 0 && msLeft < 5 * 60 * 1000;
+                  const gone = msLeft !== null && msLeft <= 0;
+                  return (
+                    <tr
+                      key={s.seriesId}
+                      className="border-b border-black font-mono text-xs hover:bg-gray-50"
+                    >
+                      <td className="p-3 font-bold">{s.slotNumber || "—"}</td>
+                      <td className="p-3">
+                        {formatDateTime(s.earliestDate)} → {formatDateTime(s.latestDate)}
+                      </td>
+                      <td className="p-3 font-bold">{s.pendingCount}</td>
+                      <td className="p-3 font-bold">{formatAmount(s.totalAmount)}</td>
+                      <td className="p-3 font-bold">
+                        <span className={gone || soon ? "text-red-700" : ""}>
+                          {formatTimeRemaining(s.expiresAt, now)}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <button
+                          type="button"
+                          disabled={payingSeriesId === s.seriesId}
+                          onClick={() => handlePaySeries(s.seriesId)}
+                          className="border-2 border-black bg-black px-3 py-2 font-mono text-xs font-bold uppercase text-white hover:bg-white hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {payingSeriesId === s.seriesId ? "Redirecting…" : `Pay All (${s.pendingCount}) →`}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
