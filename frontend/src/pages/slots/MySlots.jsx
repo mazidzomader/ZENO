@@ -432,12 +432,7 @@ function MySlots() {
                         >
                           Pricing
                         </Link>
-                        <Link
-                          to={`/bookings/owner?slot=${slot._id}`}
-                          className="border-2 border-ink px-3 py-1 hover:bg-highlight uppercase"
-                        >
-                          Bookings
-                        </Link>
+                        
                       </div>
                     </td>
                   </tr>

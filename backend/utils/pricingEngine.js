@@ -1,5 +1,6 @@
 const Slot = require("../models/Slot");
 const PricingRule = require("../models/PricingRule");
+const Booking = require("../models/Booking");
 
 const UNIT_TO_FIELD = {
   hour: "pricePerHour",
@@ -39,23 +40,31 @@ const isWithinFloorRange = (floor, floorFrom, floorTo) => {
   return true;
 };
 
-// Computes current occupancy % for the slots a rule cares about
-// (same building, and same slotType unless the rule is "all").
-const computeOccupancyRate = async (building, slotType) => {
+// Computes occupancy % for the slots a rule cares about (same building, and
+// same slotType unless the rule is "all"), AT A GIVEN MOMENT.
+//
+// "Occupied" here means: this slot has a live booking (pending/confirmed/
+// active) whose [startTime, endTime) window covers `at`. This replaces the
+// old slot.status-based count, since slot.status no longer reflects future
+// or in-progress reservations — only real-time physical presence.
+const computeOccupancyRate = async (building, slotType, at = new Date()) => {
   const scopeFilter = { building, status: { $ne: "inactive" } };
   if (slotType !== "all") {
     scopeFilter.type = slotType;
   }
 
-  const total = await Slot.countDocuments(scopeFilter);
+  const scopedSlotIds = await Slot.find(scopeFilter).distinct("_id");
+  const total = scopedSlotIds.length;
   if (total === 0) return 0;
 
-  const occupied = await Slot.countDocuments({
-    ...scopeFilter,
-    status: { $in: ["occupied", "reserved"] },
+  const occupiedSlotIds = await Booking.distinct("slotId", {
+    slotId: { $in: scopedSlotIds },
+    status: { $in: ["pending", "confirmed", "active"] },
+    startTime: { $lte: at },
+    endTime: { $gt: at },
   });
 
-  return (occupied / total) * 100;
+  return (occupiedSlotIds.length / total) * 100;
 };
 
 /**
@@ -104,7 +113,8 @@ const computeSlotPrice = async (slot, options = {}) => {
       if (occupancyCache[cacheKey] === undefined) {
         occupancyCache[cacheKey] = await computeOccupancyRate(
           slot.building,
-          rule.slotType
+          rule.slotType,
+          datetime
         );
       }
       if (occupancyCache[cacheKey] < rule.demandThreshold) continue;

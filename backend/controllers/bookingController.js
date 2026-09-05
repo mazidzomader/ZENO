@@ -4,13 +4,17 @@ const Slot = require("../models/Slot");
 const { createNotification } = require('../services/notificationService');
 const { computeSlotPrice } = require("../utils/pricingEngine");
 
+// Only these statuses represent a "live" booking that blocks other bookings
+// from overlapping the same slot/time range.
+const ACTIVE_STATUSES = ["pending", "confirmed", "active"];
+
 // @desc    Create a booking (reserve a slot) for the logged-in renter
 // @route   POST /api/bookings
 // @access  Private (renter, admin)
 const createBooking = async (req, res) => {
-  // Tracks whether we've already flipped the slot to "reserved", so we can
-  // roll it back to "available" if anything fails after that point.
-  let reservedSlot = null;
+  // Tracks the booking doc so we can roll it back if a race is lost, or if
+  // anything fails after it's been created.
+  let createdBooking = null;
 
   try {
     const { slotId, vehicleId, startTime, endTime } = req.body;
@@ -42,12 +46,14 @@ const createBooking = async (req, res) => {
       return res.status(404).json({ message: "Slot not found." });
     }
 
-    // Fast, friendly early check. The real guard against double-booking is
-    // the atomic findOneAndUpdate further down — this is just so a slot
-    // that's obviously unavailable fails fast with a clear message.
-    if (slot.status !== "available") {
+    // "inactive" is the only slot.status that blocks booking outright now —
+    // it means the owner has deliberately taken the slot offline. Every
+    // other case (including whether the slot is currently "occupied" right
+    // this second) is decided purely by whether the requested time range
+    // overlaps an existing live booking, checked below.
+    if (slot.status === "inactive") {
       return res.status(409).json({
-        message: `This slot is currently "${slot.status}" and cannot be booked.`,
+        message: "This slot is currently inactive and cannot be booked.",
       });
     }
 
@@ -67,12 +73,30 @@ const createBooking = async (req, res) => {
       }
     }
 
+    // ── TIME-BASED AVAILABILITY CHECK ──
+    // A slot can hold many bookings as long as their [startTime, endTime)
+    // windows never overlap. Two ranges overlap iff
+    // existingStart < newEnd AND existingEnd > newStart.
+    // Only "live" bookings count — cancelled/completed ones never block.
+    const overlap = await Booking.findOne({
+      slotId,
+      status: { $in: ACTIVE_STATUSES },
+      startTime: { $lt: end },
+      endTime: { $gt: start },
+    });
+
+    if (overlap) {
+      return res.status(409).json({
+        message:
+          "This slot is already booked for part or all of that time range. Please choose a different time or slot.",
+      });
+    }
+
     // ── DYNAMIC PRICING ──
     // Ask the pricing engine for the effective hourly rate at booking start
     // time — after every matching rule (slot type, floor, day/time window,
     // live demand) has been applied — instead of trusting the slot's flat
-    // base pricePerHour. This is what connects Dynamic Pricing to what a
-    // renter is actually charged.
+    // base pricePerHour.
     let pricingResult;
     try {
       pricingResult = await computeSlotPrice(slot, { unit: "hour", datetime: start });
@@ -83,24 +107,15 @@ const createBooking = async (req, res) => {
     const durationHours = Math.ceil((end - start) / (1000 * 60 * 60));
     const totalAmount = Math.round(durationHours * pricingResult.finalPrice * 100) / 100;
 
-    // ── ATOMIC RESERVATION ──
-    // Re-check availability and flip status to "reserved" in a single
-    // findOneAndUpdate. If two requests race for the same slot, only the
-    // first one's update matches the { status: "available" } filter — the
-    // second gets null back instead of silently double-booking the slot.
-    reservedSlot = await Slot.findOneAndUpdate(
-      { _id: slotId, status: "available" },
-      { status: "reserved" },
-      { new: true }
-    );
-
-    if (!reservedSlot) {
-      return res.status(409).json({
-        message: "This slot was just booked by someone else. Please choose another.",
-      });
-    }
-
-    const booking = await Booking.create({
+    // ── CREATE, THEN RE-VERIFY (race-safe without needing a DB transaction) ──
+    // We already checked for overlaps above, but two requests can race
+    // between that check and this insert. MongoDB has no built-in way to
+    // enforce "no overlapping ranges" as a unique index, so instead we
+    // create the booking optimistically, then immediately re-check for any
+    // other live overlapping booking. If one exists and it was created
+    // first (earlier createdAt, or a smaller _id as a tie-breaker), we roll
+    // this one back — first-created booking always wins.
+    createdBooking = await Booking.create({
       renterId: req.user._id,
       slotId: slot._id,
       vehicleId: vehicleId || null,
@@ -117,27 +132,53 @@ const createBooking = async (req, res) => {
       },
     });
 
+    const rivals = await Booking.find({
+      slotId,
+      status: { $in: ACTIVE_STATUSES },
+      startTime: { $lt: end },
+      endTime: { $gt: start },
+      _id: { $ne: createdBooking._id },
+    }).select("_id createdAt");
+
+    const iLost = rivals.some((rival) => {
+      if (rival.createdAt.getTime() !== createdBooking.createdAt.getTime()) {
+        return rival.createdAt < createdBooking.createdAt;
+      }
+      return rival._id.toString() < createdBooking._id.toString();
+    });
+
+    if (iLost) {
+      await Booking.findByIdAndDelete(createdBooking._id);
+      createdBooking = null;
+      return res.status(409).json({
+        message:
+          "This slot was just booked by someone else for an overlapping time. Please choose another time or slot.",
+      });
+    }
+
+    // Note: slot.status is NOT touched here. It only reflects physical,
+    // real-time presence, which changes via check-in/check-out
+    // (checkinoutController.js) or an owner deactivating the slot.
+
     await createNotification({
       userId: req.user._id,
       type: 'booking_confirmed',
       title: 'Booking Pending Payment',
-      message: `You have successfully reserved slot ${reservedSlot.slotNumber} from ${start.toLocaleString()} to ${end.toLocaleString()}. Total: $${totalAmount}. Please complete payment.`,
-      relatedId: booking._id,
+      message: `You have successfully reserved slot ${slot.slotNumber} from ${start.toLocaleString()} to ${end.toLocaleString()}. Total: $${totalAmount}. Please complete payment.`,
+      relatedId: createdBooking._id,
       sendEmail: true,
     });
 
     return res.status(201).json({
       message: "Slot reserved successfully. Please complete payment to confirm your booking.",
-      booking,
-      slot: reservedSlot,
+      booking: createdBooking,
+      slot,
     });
   } catch (error) {
     console.error("createBooking error:", error);
 
-    // Roll back the reservation if we'd already flipped the slot to
-    // "reserved" but failed to finish creating the booking.
-    if (reservedSlot) {
-      await Slot.findByIdAndUpdate(reservedSlot._id, { status: "available" }).catch(() => {});
+    if (createdBooking) {
+      await Booking.findByIdAndDelete(createdBooking._id).catch(() => {});
     }
 
     return res.status(500).json({ message: "Failed to create booking." });
@@ -173,14 +214,23 @@ const cancelBooking = async (req, res) => {
       });
     }
 
+    // If the renter had already physically checked in (booking.status ===
+    // "active", which is what flips slot.status to "occupied" in
+    // checkinoutController.js), cancelling here is really "force-ending an
+    // in-progress stay" — so free the slot's real-world status too.
+    // For "pending"/"confirmed" bookings, slot.status was never touched by
+    // booking creation (see createBooking above), so there's nothing to revert.
+    const wasActive = booking.status === "active";
+
     booking.status = "cancelled";
     await booking.save();
 
-    // Free the slot back up, as long as it wasn't deliberately deactivated
-    const slot = await Slot.findById(booking.slotId);
-    if (slot && slot.status !== "inactive") {
-      slot.status = "available";
-      await slot.save();
+    if (wasActive) {
+      const slot = await Slot.findById(booking.slotId);
+      if (slot && slot.status !== "inactive") {
+        slot.status = "available";
+        await slot.save();
+      }
     }
 
     return res.status(200).json({
@@ -193,6 +243,109 @@ const cancelBooking = async (req, res) => {
   }
 };
 
+// @desc    Check whether a slot is free for a given time window — call this
+//          from the frontend before showing/submitting the booking form.
+// @route   GET /api/bookings/availability/:slotId?start=ISO&end=ISO
+// @access  Public
+const checkAvailability = async (req, res) => {
+  try {
+    const { slotId } = req.params;
+    const { start: startParam, end: endParam } = req.query;
+
+    if (!mongoose.Types.ObjectId.isValid(slotId)) {
+      return res.status(400).json({ message: "Invalid slotId." });
+    }
+
+    if (!startParam || !endParam) {
+      return res.status(400).json({ message: "Please provide start and end query params." });
+    }
+
+    const start = new Date(startParam);
+    const end = new Date(endParam);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return res.status(400).json({ message: "Invalid start or end datetime." });
+    }
+
+    if (start >= end) {
+      return res.status(400).json({ message: "end must be after start." });
+    }
+
+    const slot = await Slot.findById(slotId);
+    if (!slot) {
+      return res.status(404).json({ message: "Slot not found." });
+    }
+
+    if (slot.status === "inactive") {
+      return res.status(200).json({
+        available: false,
+        reason: "This slot is currently inactive.",
+      });
+    }
+
+    const conflict = await Booking.findOne({
+      slotId,
+      status: { $in: ACTIVE_STATUSES },
+      startTime: { $lt: end },
+      endTime: { $gt: start },
+    }).select("startTime endTime status");
+
+    if (conflict) {
+      return res.status(200).json({
+        available: false,
+        reason: "This time range overlaps an existing booking.",
+        conflict: {
+          startTime: conflict.startTime,
+          endTime: conflict.endTime,
+          status: conflict.status,
+        },
+      });
+    }
+
+    return res.status(200).json({ available: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    List a slot's live/upcoming bookings in a date range, so the
+//          frontend can render a "busy times" calendar before someone
+//          submits a booking request. Never exposes renter identity.
+// @route   GET /api/bookings/slot/:slotId/schedule?from=ISO&to=ISO
+// @access  Public
+const getSlotSchedule = async (req, res) => {
+  try {
+    const { slotId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(slotId)) {
+      return res.status(400).json({ message: "Invalid slotId." });
+    }
+
+    const filter = {
+      slotId,
+      status: { $in: ACTIVE_STATUSES },
+    };
+
+    const from = req.query.from ? new Date(req.query.from) : null;
+    const to = req.query.to ? new Date(req.query.to) : null;
+
+    if (from && !Number.isNaN(from.getTime())) {
+      filter.endTime = { $gt: from };
+    }
+    if (to && !Number.isNaN(to.getTime())) {
+      filter.startTime = { ...(filter.startTime || {}), $lt: to };
+    }
+
+    const bookings = await Booking.find(filter)
+      .select("startTime endTime status")
+      .sort({ startTime: 1 });
+
+    res.status(200).json({ count: bookings.length, bookings });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get booking history for the logged-in renter
 // @route   GET /api/bookings/history
 // @access  Private
@@ -202,14 +355,12 @@ const getMyBookingHistory = async (req, res) => {
       renterId: req.user._id,
     };
 
-    // Optional status filter
     const status = String(req.query.status || "").trim();
 
     if (status && status.toLowerCase() !== "all") {
       filter.status = status;
     }
 
-    // Optional date filters
     const fromDate = req.query.from
       ? new Date(req.query.from)
       : null;
@@ -270,9 +421,6 @@ const getOwnerBookings = async (req, res) => {
   try {
     const { slot: slotIdParam, building: buildingIdParam, status } = req.query;
 
-    // Figure out which slot IDs this requester is allowed to see bookings
-    // for. Owners are restricted to slots they actually own; admins see
-    // everything (optionally narrowed by the same building/slot filters).
     const slotFilter = {};
     if (req.user.role !== "admin") {
       slotFilter.owner = req.user._id;
@@ -288,8 +436,6 @@ const getOwnerBookings = async (req, res) => {
     const allowedSlotIds = allowedSlots.map((s) => s._id);
 
     if (slotIdParam && allowedSlotIds.length === 0) {
-      // Either the slot doesn't exist, or it exists but isn't owned by this
-      // requester — don't leak which, just say "not found".
       return res.status(404).json({ message: "Slot not found or not owned by you." });
     }
 
@@ -312,5 +458,7 @@ module.exports = {
   getMyBookingHistory,
   createBooking,
   cancelBooking,
+  checkAvailability,
+  getSlotSchedule,
   getOwnerBookings,
 };

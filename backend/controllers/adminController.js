@@ -169,14 +169,22 @@ exports.cancelBooking = async (req, res) => {
     if (!booking) return res.status(404).json({ error: "Booking not found." });
     if (booking.status === "cancelled") return res.status(400).json({ error: "Already cancelled." });
 
+    // Only free the slot's physical status if THIS booking was the one
+    // currently checked in (status "active"). A pending/confirmed booking
+    // never touched slot.status, so there's nothing to revert for those —
+    // and blindly setting status back to "available" here could wrongly
+    // kick out an unrelated, currently-parked car.
+    const wasActive = booking.status === "active";
+
     booking.status = "cancelled";
     await booking.save();
 
-    // Free the slot
-    const slot = await Slot.findById(booking.slotId);
-    if (slot && slot.status !== "inactive") {
-      slot.status = "available";
-      await slot.save();
+    if (wasActive) {
+      const slot = await Slot.findById(booking.slotId);
+      if (slot && slot.status !== "inactive") {
+        slot.status = "available";
+        await slot.save();
+      }
     }
 
     res.json({ message: "Booking cancelled by admin.", booking });

@@ -1,6 +1,7 @@
 const Slot = require("../models/Slot");
 const Building = require("../models/Building");
 const Booking = require("../models/Booking");
+
 // Small helper: only the building's owner (or an admin) may manage its slots
 const canManageBuilding = (req, buildingDoc) => {
   return (
@@ -17,6 +18,20 @@ const naturalSortBySlotNumber = (slots) => {
       sensitivity: "base",
     })
   );
+};
+
+// Finds a live (pending/confirmed/active) booking on this slot that hasn't
+// ended yet — i.e. something currently in progress OR still upcoming.
+// Used to guard against editing/deactivating/deleting a slot out from under
+// a booking a renter is relying on. Replaces the old slot.status-based
+// checks, since slot.status no longer reflects reservations — only
+// physical, real-time presence.
+const findLiveBooking = async (slotId) => {
+  return Booking.findOne({
+    slotId,
+    status: { $in: ["pending", "confirmed", "active"] },
+    endTime: { $gt: new Date() },
+  }).select("startTime endTime status");
 };
 
 // @desc    Create a new parking slot
@@ -163,7 +178,6 @@ const bulkCreateSlots = async (req, res) => {
       });
     }
 
-    // Build the list of slots to create
     const slotsToCreate = [];
     for (let n = start; n <= end; n++) {
       slotsToCreate.push({
@@ -179,8 +193,6 @@ const bulkCreateSlots = async (req, res) => {
       });
     }
 
-    // Check which slot numbers already exist in this building, so we can
-    // skip them instead of failing the whole batch.
     const existing = await Slot.find({
       building,
       slotNumber: { $in: slotsToCreate.map((s) => s.slotNumber) },
@@ -211,7 +223,6 @@ const bulkCreateSlots = async (req, res) => {
 // @desc    Get all slots (optionally filtered by building or status)
 // @route   GET /api/slots
 // @access  Public
-
 const getSlots = async (req, res) => {
   try {
     const filter = {};
@@ -224,8 +235,6 @@ const getSlots = async (req, res) => {
       filter.status = req.query.status;
     }
 
-    // New records use "building".
-    // Some older database records use the legacy field "buildingId".
     const slots = await Slot.find(filter)
       .populate("building", "name address")
       .populate("owner", "name email phone")
@@ -310,7 +319,6 @@ const getSlotById = async (req, res) => {
     const slot = await Slot.findById(req.params.id)
       .populate("building", "name address totalFloors")
       .populate("owner", "name email phone");
-    
 
     if (!slot) {
       return res.status(404).json({ message: "Slot not found." });
@@ -345,14 +353,22 @@ const updateSlot = async (req, res) => {
         .json({ message: "You do not have permission to edit this slot." });
     }
 
-    // A slot that's currently reserved or occupied has an active booking
-    // tied to it. Editing floor/price/dimensions out from under that
-    // booking would silently change what the renter already paid for, so
-    // block it here. Owners can still edit once the booking ends.
-    if (["reserved", "occupied"].includes(slot.status)) {
-      return res.status(409).json({
-        message: `This slot is currently "${slot.status}" and has an active booking. Editing is disabled until the booking is completed or cancelled.`,
-      });
+    // Floor and dimensions describe a physical location — changing them
+    // while a booking is currently in-progress or still upcoming could send
+    // a renter to the wrong physical spot, so those two are blocked while a
+    // live booking exists. Price fields are always safe to change: every
+    // existing booking already has its own pricingSnapshot taken at booking
+    // time, so past/current bookings aren't affected by a price edit.
+    const changingPhysicalFields =
+      req.body.floor !== undefined || req.body.dimensions !== undefined;
+
+    if (changingPhysicalFields) {
+      const liveBooking = await findLiveBooking(slot._id);
+      if (liveBooking) {
+        return res.status(409).json({
+          message: `This slot has a booking (status: "${liveBooking.status}") from ${liveBooking.startTime.toLocaleString()} to ${liveBooking.endTime.toLocaleString()}. Floor/dimensions cannot be changed until it ends or is cancelled.`,
+        });
+      }
     }
 
     if (req.body.floor !== undefined) {
@@ -364,9 +380,8 @@ const updateSlot = async (req, res) => {
     }
 
     // "status" is intentionally excluded here — it must only change via the
-    // dedicated /activate and /deactivate endpoints (or automatically by the
-    // booking flow), never as a raw field edit that could desync a slot from
-    // its real booking state.
+    // dedicated /activate and /deactivate endpoints, or automatically via
+    // check-in/check-out, never as a raw field edit.
     const updatableFields = [
       "slotNumber",
       "floor",
@@ -418,9 +433,10 @@ const deactivateSlot = async (req, res) => {
         .json({ message: "You do not have permission to modify this slot." });
     }
 
-    if (["reserved", "occupied"].includes(slot.status)) {
+    const liveBooking = await findLiveBooking(slot._id);
+    if (liveBooking) {
       return res.status(409).json({
-        message: `This slot is currently "${slot.status}" and cannot be deactivated until the active booking ends or is cancelled.`,
+        message: `This slot has a booking (status: "${liveBooking.status}") from ${liveBooking.startTime.toLocaleString()} to ${liveBooking.endTime.toLocaleString()}. It cannot be deactivated until that booking ends or is cancelled.`,
       });
     }
 
@@ -455,23 +471,10 @@ const deleteSlot = async (req, res) => {
         .json({ message: "You do not have permission to delete this slot." });
     }
 
-    if (["reserved", "occupied"].includes(slot.status)) {
+    const liveBooking = await findLiveBooking(slot._id);
+    if (liveBooking) {
       return res.status(409).json({
-        message: `This slot is currently "${slot.status}" and cannot be deleted while it has an active booking. Cancel or wait for the booking to complete first.`,
-      });
-    }
-
-    // Extra safety net: even if status somehow drifted out of sync, never
-    // delete a slot that any non-final booking still references.
-    const activeBooking = await Booking.findOne({
-      slotId: slot._id,
-      status: { $in: ["confirmed", "active"] },
-    });
-
-    if (activeBooking) {
-      return res.status(409).json({
-        message:
-          "This slot has an active or upcoming booking and cannot be deleted.",
+        message: `This slot has a booking (status: "${liveBooking.status}") from ${liveBooking.startTime.toLocaleString()} to ${liveBooking.endTime.toLocaleString()}. It cannot be deleted until that booking ends or is cancelled.`,
       });
     }
 
@@ -513,8 +516,6 @@ const activateSlot = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-
 
 module.exports = {
   createSlot,

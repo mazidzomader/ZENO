@@ -1,5 +1,6 @@
 const Building = require("../models/Building");
 const Slot = require("../models/Slot");
+const Booking = require("../models/Booking");
 
 // Small helper: only the building's owner (or an admin) may manage it
 const canManageBuilding = (req, buildingDoc) => {
@@ -92,10 +93,6 @@ const updateBuilding = async (req, res) => {
         .json({ message: "You do not have permission to edit this building." });
     }
 
-    // Guard against shrinking totalFloors below a floor that an existing
-    // slot already occupies — that would silently make a real slot's floor
-    // number invalid for every future validation check (createSlot,
-    // updateSlot, bulkCreateSlots all check floor against totalFloors).
     if (req.body.totalFloors !== undefined) {
       const newTotalFloors = Number(req.body.totalFloors);
 
@@ -146,30 +143,33 @@ const deleteBuilding = async (req, res) => {
         .json({ message: "You do not have permission to delete this building." });
     }
 
-    // Block if any slot in this building currently has an active booking —
-    // same class of protection as slot deletion.
-    const activeSlot = await Slot.findOne({
-      building: building._id,
-      status: { $in: ["reserved", "occupied"] },
-    }).select("slotNumber status");
-
-    if (activeSlot) {
-      return res.status(409).json({
-        message: `This building has an active booking on slot "${activeSlot.slotNumber}" (status: "${activeSlot.status}") and cannot be deleted until it ends or is cancelled.`,
-      });
-    }
-
-    // Even if no slot is actively booked, deleting the building while any
-    // slot still references it would orphan that slot — every slot lookup
-    // (edit, deactivate, delete, bulk create) depends on the building
-    // existing. Require the owner to clear out slots first.
-    const anySlot = await Slot.findOne({ building: building._id }).select(
-      "slotNumber"
+    const buildingSlots = await Slot.find({ building: building._id }).select(
+      "_id slotNumber"
     );
 
-    if (anySlot) {
+    if (buildingSlots.length > 0) {
+      const slotIds = buildingSlots.map((s) => s._id);
+
+      // Block if any of this building's slots has a live (pending/
+      // confirmed/active) booking that hasn't ended yet.
+      const conflictBooking = await Booking.findOne({
+        slotId: { $in: slotIds },
+        status: { $in: ["pending", "confirmed", "active"] },
+        endTime: { $gt: new Date() },
+      }).populate("slotId", "slotNumber");
+
+      if (conflictBooking) {
+        return res.status(409).json({
+          message: `This building has an active or upcoming booking on slot "${
+            conflictBooking.slotId?.slotNumber || "unknown"
+          }" and cannot be deleted until it ends or is cancelled.`,
+        });
+      }
+
+      // No live booking, but slots still exist and reference this building —
+      // deleting it now would orphan them. Require they be cleared out first.
       return res.status(409).json({
-        message: `This building still has slots (e.g. "${anySlot.slotNumber}"). Delete or reassign all of its slots before deleting the building.`,
+        message: `This building still has slots (e.g. "${buildingSlots[0].slotNumber}"). Delete or reassign all of its slots before deleting the building.`,
       });
     }
 

@@ -5,6 +5,8 @@ const {
   getMyBookingHistory,
   createBooking,
   cancelBooking,
+  checkAvailability,
+  getSlotSchedule,
   getOwnerBookings,
 } = require("../controllers/bookingController");
 
@@ -20,7 +22,14 @@ router.get("/history", protect, getMyBookingHistory);
 // before any "/:id" style route so "owner" isn't swallowed as an id param)
 router.get("/owner", protect, authorize("owner", "admin"), getOwnerBookings);
 
-// Create a new booking (reserve a slot)
+// Public — check whether a slot is free for a given time window, before
+// showing/submitting the booking form.
+router.get("/availability/:slotId", checkAvailability);
+
+// Public — a slot's busy time ranges, for rendering a calendar in the UI.
+router.get("/slot/:slotId/schedule", getSlotSchedule);
+
+// Create a new booking (reserve a slot for a time range)
 router.post("/", protect, authorize("renter", "admin"), createBooking);
 
 // Cancel a booking (frees the slot back up)
