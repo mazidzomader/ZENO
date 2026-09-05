@@ -2,6 +2,7 @@ import BrowseSlots from "../pages/slots/BrowseSlots";
 import { Routes, Route, Navigate } from "react-router-dom";
 import BookingHistory from "../pages/bookings/BookingHistory";
 import OwnerBookings from "../pages/bookings/OwnerBookings";
+import RecurringBookings from "../pages/bookings/RecurringBookings";
 
 import Home from "../pages/Home";
 import Login from "../pages/Login";
@@ -82,6 +83,9 @@ function AppRoutes() {
 
         {/* Owner — see who's booked into their slots */}
         <Route path="/bookings/owner" element={<OwnerBookings />} />
+
+        {/* Recurring / repeating bookings management */}
+        <Route path="/bookings/recurring" element={<RecurringBookings />} />
 
         {/* Feature 07 — Navigation */}
         <Route path="/navigation" element={<Navigation />} />

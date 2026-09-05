@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import API from "../../services/api";
 
 function formatDateTime(value) {
@@ -289,6 +290,7 @@ function BookingHistory() {
                 <tr>
                   <th className="p-3">Booking ID</th>
                   <th className="p-3">Slot ID</th>
+                  <th className="p-3">Series</th>
                   <th className="p-3">Start</th>
                   <th className="p-3">End</th>
                   <th className="p-3">Status</th>
@@ -316,6 +318,20 @@ function BookingHistory() {
 
                         <td className="p-3">
                           {String(booking.slotId?._id || booking.slotId || "—")}
+                        </td>
+
+                        <td className="p-3">
+                          {booking.seriesId ? (
+                            <Link
+                              to="/bookings/recurring"
+                              className="underline font-bold uppercase text-purple-700"
+                              title="Part of a recurring booking series"
+                            >
+                              Recurring
+                            </Link>
+                          ) : (
+                            <span className="text-gray-400">One-time</span>
+                          )}
                         </td>
 
                         <td className="p-3">
@@ -397,7 +413,7 @@ function BookingHistory() {
 
                       {isExpanded && snapshot && (
                         <tr key={`${booking._id}-detail`} className="border-b border-black bg-gray-50">
-                          <td colSpan={8} className="p-4 font-mono text-xs">
+                          <td colSpan={9} className="p-4 font-mono text-xs">
                             <div className="flex flex-wrap gap-6">
                               <div>
                                 <p className="text-gray-500 uppercase text-[10px]">Base rate / hr</p>

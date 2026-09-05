@@ -49,6 +49,13 @@ export const sidebarItems = [
     roles: ["renter", "admin"], // a renter's own reservations
   },
   {
+    id: "recurring-bookings",
+    title: "Recurring Bookings",
+    icon: "Repeat",
+    path: "/bookings/recurring",
+    roles: ["renter", "admin"],
+  },
+  {
     id: "owner-bookings",
     title: "Slot Bookings",
     icon: "Calendar",

@@ -22,6 +22,17 @@ const bookingSchema = new mongoose.Schema(
       default: null,
     },
 
+    // If this booking was created as part of a recurring booking series
+    // (see models/BookingSeries.js), this points back to that series so
+    // occurrences can be grouped, displayed, and cancelled together. Null
+    // for a normal one-off booking.
+    seriesId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "BookingSeries",
+      default: null,
+      index: true,
+    },
+
     startTime: {
       type: Date,
       required: true,
