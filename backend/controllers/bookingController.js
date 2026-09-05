@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Booking = require("../models/Booking");
 const Slot = require("../models/Slot");
+const SlotBlackout = require("../models/SlotBlackout");
 const { createNotification } = require('../services/notificationService');
 const { computeSlotPrice } = require("../utils/pricingEngine");
 
@@ -56,11 +57,31 @@ const createBooking = async (req, res) => {
     // other case (including whether the slot is currently "occupied" right
     // this second) is decided purely by whether the requested time range
     // overlaps an existing live booking, checked below.
-    if (slot.status === "inactive") {
+        if (slot.status === "inactive") {
       return res.status(409).json({
         message: "This slot is currently inactive and cannot be booked.",
       });
     }
+
+    // ── BLACKOUT CHECK ──
+    // Owners can schedule a future maintenance/blackout window on a slot
+    // (see blackoutController.js) without deactivating it entirely. Block
+    // this booking if its range overlaps any scheduled blackout.
+    const blackoutConflict = await SlotBlackout.findOne({
+      slot: slot._id,
+      startDate: { $lt: end },
+      endDate: { $gt: start },
+    });
+
+    if (blackoutConflict) {
+      return res.status(409).json({
+        message: `This slot is scheduled for maintenance from ${blackoutConflict.startDate.toLocaleString()} to ${blackoutConflict.endDate.toLocaleString()}${blackoutConflict.reason ? ` (${blackoutConflict.reason})` : ""}. Please choose a different time or slot.`,
+      });
+    }
+
+    // Optional: make sure the vehicle (if provided) actually belongs to this renter
+
+
 
     // Optional: make sure the vehicle (if provided) actually belongs to this renter
     if (vehicleId) {
@@ -282,12 +303,27 @@ const checkAvailability = async (req, res) => {
       return res.status(404).json({ message: "Slot not found." });
     }
 
-    if (slot.status === "inactive") {
+        if (slot.status === "inactive") {
       return res.status(200).json({
         available: false,
         reason: "This slot is currently inactive.",
       });
     }
+
+    const blackoutConflict = await SlotBlackout.findOne({
+      slot: slot._id,
+      startDate: { $lt: end },
+      endDate: { $gt: start },
+    });
+
+    if (blackoutConflict) {
+      return res.status(200).json({
+        available: false,
+        reason: `This slot is scheduled for maintenance from ${blackoutConflict.startDate.toLocaleString()} to ${blackoutConflict.endDate.toLocaleString()}${blackoutConflict.reason ? ` (${blackoutConflict.reason})` : ""}.`,
+      });
+    }
+
+    
 
     const conflict = await Booking.findOne({
       slotId,

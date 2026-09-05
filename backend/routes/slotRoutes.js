@@ -13,6 +13,11 @@ const {
   deleteSlot,
 } = require("../controllers/slotController");
 
+const {
+  createBlackout,
+  getBlackoutsForSlot,
+} = require("../controllers/blackoutController");
+
 const { protect, authorize } = require("../middleware/authMiddleware");
 
 // "/mine" must come before "/:id" so it isn't swallowed as an id param
@@ -25,5 +30,15 @@ router.put("/:id", protect, authorize("owner", "admin"), updateSlot);
 router.patch("/:id/deactivate", protect, authorize("owner", "admin"), deactivateSlot);
 router.patch("/:id/activate", protect, authorize("owner", "admin"), activateSlot);
 router.delete("/:id", protect, authorize("owner", "admin"), deleteSlot);
+
+// Slot Maintenance / Blackout Scheduling — block a slot for a future date
+// range (repairs, reserved for a tenant) without deactivating it entirely.
+router.post(
+  "/:slotId/blackouts",
+  protect,
+  authorize("owner", "admin"),
+  createBlackout
+);
+router.get("/:slotId/blackouts", getBlackoutsForSlot);
 
 module.exports = router;

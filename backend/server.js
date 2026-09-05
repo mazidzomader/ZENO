@@ -20,6 +20,7 @@ const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const checkinoutRoutes = require('./routes/checkinoutRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const adminRoutes = require("./routes/adminRoutes");
+const blackoutRoutes = require("./routes/blackoutRoutes");
 const { expirePendingBookings } = require("./utils/bookingExpiry");
 dotenv.config();
 
@@ -45,7 +46,7 @@ app.use("/api/subscriptions", subscriptionRoutes);
 app.use('/api/checkinout', checkinoutRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use("/api/admin", adminRoutes);
-
+app.use("/api/blackouts", blackoutRoutes);
 app.get("/", (req, res) => {
   res.send("ZENO backend is running!");
 });

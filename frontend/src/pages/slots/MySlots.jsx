@@ -426,13 +426,20 @@ function MySlots() {
                             </button>
                           </>
                         )}
+
+
                         <Link
                           to={`/pricing-rules?slot=${slot._id}`}
                           className="border-2 border-ink px-3 py-1 hover:bg-highlight uppercase"
                         >
                           Pricing
                         </Link>
-                        
+                        <Link
+                          to={`/slots/${slot._id}/blackouts`}
+                          className="border-2 border-ink px-3 py-1 hover:bg-highlight uppercase"
+                        >
+                          Blackouts
+                        </Link>
                       </div>
                     </td>
                   </tr>

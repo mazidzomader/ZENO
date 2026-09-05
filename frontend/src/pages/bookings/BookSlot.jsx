@@ -11,7 +11,12 @@ function BookSlot() {
   const [loadingSlot, setLoadingSlot] = useState(true);
   const [loadError, setLoadError] = useState("");
 
+
   const [vehicles, setVehicles] = useState([]);
+
+  // Upcoming maintenance / blackout windows for this slot, so the renter
+  // knows why certain dates are unavailable before they even try to book.
+  const [blackouts, setBlackouts] = useState([]);
 
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -43,7 +48,7 @@ function BookSlot() {
     fetchSlot();
   }, [id]);
 
-  // Load the renter's registered vehicles (optional selection)
+    // Load the renter's registered vehicles (optional selection)
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
@@ -55,6 +60,22 @@ function BookSlot() {
     };
     fetchVehicles();
   }, []);
+
+  // Load this slot's upcoming scheduled blackout windows (maintenance /
+  // reserved-for-tenant periods) so the renter can avoid picking those dates.
+  useEffect(() => {
+    const fetchBlackouts = async () => {
+      try {
+        const res = await API.get(`/slots/${id}/blackouts`);
+        setBlackouts(res.data.blackouts || []);
+      } catch {
+        // Non-critical — booking will still be rejected server-side if the
+        // chosen range overlaps a blackout.
+      }
+    };
+    fetchBlackouts();
+  }, [id]);
+
 
   // Basic client-side validity check for the chosen time range
   const rangeIsValid = useMemo(() => {
@@ -249,7 +270,26 @@ function BookSlot() {
               </div>
             )}
 
+            {blackouts.length > 0 && (
+              <div className="border-2 border-alert bg-bgAlt p-4 mb-8 font-mono text-xs">
+                <p className="font-bold uppercase tracking-widest text-alert">
+                  Scheduled Maintenance / Unavailable Windows
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {blackouts.map((b) => (
+                    <li key={b._id}>
+                      {new Date(b.startDate).toLocaleString()} &rarr;{" "}
+                      {new Date(b.endDate).toLocaleString()}
+                      {b.reason ? ` — ${b.reason}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {slot.status !== "available" ? (
+
+            
               <div className="border-2 border-alert text-alert font-mono font-bold uppercase text-xs px-4 py-3">
                 This slot is currently "{slot.status}" and cannot be booked right now.
               </div>

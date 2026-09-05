@@ -16,6 +16,7 @@ import { CollectionGridView } from "../pages/collections/CollectionGridView";
 import MySlots from "../pages/slots/MySlots";
 import SlotForm from "../pages/slots/SlotForm";
 import BulkSlotForm from "../pages/slots/BulkSlotForm";
+import SlotBlackouts from "../pages/slots/SlotBlackouts";
 import ManageBuildings from "../pages/buildings/ManageBuildings";
 // Feature 02 — Slot Booking & Reservation
 import BookSlot from "../pages/bookings/BookSlot";
@@ -100,6 +101,7 @@ function AppRoutes() {
         <Route path="/slots/new" element={<SlotForm />} />
         <Route path="/slots/:id/edit" element={<SlotForm />} />
         <Route path="/slots/bulk" element={<BulkSlotForm />} />
+        <Route path="/slots/:id/blackouts" element={<SlotBlackouts />} />
         <Route path="/buildings/manage" element={<ManageBuildings />} />
            
         {/* Feature 02 — Slot Booking & Reservation */}
