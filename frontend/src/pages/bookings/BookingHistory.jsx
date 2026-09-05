@@ -27,6 +27,10 @@ const CANCELLABLE_STATUSES = ["pending", "confirmed", "active"];
 // be extended — matches the guard in paymentRoutes.js's create-extend-session.
 const EXTENDABLE_STATUSES = ["confirmed", "active"];
 
+// How many hours a renter can pick from in the extend dropdown.
+// Keep this <= MAX_EXTEND_HOURS in backend/routes/paymentRoutes.js.
+const EXTEND_HOUR_OPTIONS = [1, 2, 3, 4, 5, 6];
+
 function BookingHistory() {
   const [bookings, setBookings] = useState([]);
   const [status, setStatus] = useState("all");
@@ -39,6 +43,10 @@ function BookingHistory() {
   const [extendingId, setExtendingId] = useState(null);
   const [actionError, setActionError] = useState("");
   const [expandedId, setExpandedId] = useState(null);
+
+  // Tracks the currently-selected "hours to extend by" per booking row.
+  // Defaults to 1 hour for any booking not yet touched.
+  const [extendHoursById, setExtendHoursById] = useState({});
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -106,22 +114,30 @@ function BookingHistory() {
     }
   };
 
-  // "Extend my stay" — one tap: ask the backend for a quote + Stripe
-  // checkout session for the next hour, confirm the price, then redirect
-  // to Stripe. No need to go through the full booking form again.
+  const getExtendHours = (bookingId) => extendHoursById[bookingId] || 1;
+
+  const setExtendHours = (bookingId, hours) => {
+    setExtendHoursById((current) => ({ ...current, [bookingId]: hours }));
+  };
+
+  // "Extend my stay" — renter picks how many hours from the dropdown, we ask
+  // the backend for a quote + Stripe checkout session for that many hours,
+  // confirm the price, then redirect to Stripe. No full booking form needed.
   const handleExtend = async (bookingId) => {
+    const hours = getExtendHours(bookingId);
+
     setActionError("");
     setExtendingId(bookingId);
     try {
       const res = await API.post("/payments/create-extend-session", {
         bookingId,
-        hours: 1,
+        hours,
       });
 
-      const { url, extraAmount, newEndTime } = res.data;
+      const { url, extraAmount, newEndTime, hours: confirmedHours } = res.data;
 
       const confirmed = window.confirm(
-        `Extend this booking by 1 hour (until ${new Date(
+        `Extend this booking by ${confirmedHours} hour(s) (until ${new Date(
           newEndTime
         ).toLocaleString()}) for $${extraAmount}?\n\nYou'll be redirected to Stripe to pay.`
       );
@@ -135,7 +151,7 @@ function BookingHistory() {
     } catch (err) {
       setActionError(
         err.response?.data?.error ||
-          "Could not extend this booking. The next hour may already be booked."
+          "Could not extend this booking. That many hours may already be booked on this slot."
       );
       setExtendingId(null);
     }
@@ -286,6 +302,7 @@ function BookingHistory() {
                 {bookings.map((booking) => {
                   const snapshot = booking.pricingSnapshot;
                   const isExpanded = expandedId === booking._id;
+                  const canExtend = EXTENDABLE_STATUSES.includes(booking.status);
 
                   return (
                     <>
@@ -332,16 +349,34 @@ function BookingHistory() {
                         </td>
 
                         <td className="p-3">
-                          <div className="flex flex-wrap gap-2">
-                            {EXTENDABLE_STATUSES.includes(booking.status) && (
-                              <button
-                                type="button"
-                                onClick={() => handleExtend(booking._id)}
-                                disabled={extendingId === booking._id}
-                                className="border-2 border-black px-3 py-1 font-bold uppercase hover:bg-black hover:text-white disabled:opacity-60"
-                              >
-                                {extendingId === booking._id ? "..." : "Extend +1hr"}
-                              </button>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {canExtend && (
+                              <>
+                                <select
+                                  value={getExtendHours(booking._id)}
+                                  onChange={(event) =>
+                                    setExtendHours(booking._id, Number(event.target.value))
+                                  }
+                                  disabled={extendingId === booking._id}
+                                  className="border-2 border-black p-1 font-bold uppercase disabled:opacity-60"
+                                  title="Hours to extend by"
+                                >
+                                  {EXTEND_HOUR_OPTIONS.map((h) => (
+                                    <option key={h} value={h}>
+                                      {h}hr
+                                    </option>
+                                  ))}
+                                </select>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleExtend(booking._id)}
+                                  disabled={extendingId === booking._id}
+                                  className="border-2 border-black px-3 py-1 font-bold uppercase hover:bg-black hover:text-white disabled:opacity-60"
+                                >
+                                  {extendingId === booking._id ? "..." : "Extend"}
+                                </button>
+                              </>
                             )}
 
                             {CANCELLABLE_STATUSES.includes(booking.status) ? (
@@ -354,9 +389,7 @@ function BookingHistory() {
                                 {cancellingId === booking._id ? "..." : "Cancel"}
                               </button>
                             ) : (
-                              !EXTENDABLE_STATUSES.includes(booking.status) && (
-                                <span className="text-gray-400">—</span>
-                              )
+                              !canExtend && <span className="text-gray-400">—</span>
                             )}
                           </div>
                         </td>
