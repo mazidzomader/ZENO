@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import API from "../../services/api";
 import Layout from "../../components/Layout";
-
+import SlotAvailabilityTimeline from "../../components/SlotAvailabilityTimeline";
 // Recurring-booking day picker options (0 = Sunday .. 6 = Saturday, matches
 // the daysOfWeek convention already used by PricingRule on the backend).
 const DAY_OPTIONS = [
@@ -61,12 +61,29 @@ function BookSlot() {
 
   // Switch between "single" and "recurring" mode, clearing any leftover
   // messages from the other mode so they don't linger on screen.
-  const switchMode = (nextMode) => {
+    const switchMode = (nextMode) => {
     setMode(nextMode);
     setError("");
     setSuccess("");
     setRecurringError("");
     setRecurringResult(null);
+  };
+
+  // Formats a Date as the "YYYY-MM-DDTHH:mm" string the datetime-local
+  // inputs expect, using the browser's local time (no UTC conversion).
+  const toDatetimeLocalValue = (date) => {
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+      date.getDate()
+    )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  // Called when the renter clicks "Use This Time" on the availability
+  // timeline below — fills the one-time booking form with that range.
+  const handlePickRange = (start, end) => {
+    switchMode("single");
+    setStartTime(toDatetimeLocalValue(start));
+    setEndTime(toDatetimeLocalValue(end));
   };
 
   // Load the slot's details
@@ -498,6 +515,13 @@ function BookSlot() {
                     Repeating Booking
                   </button>
                 </div>
+
+                <SlotAvailabilityTimeline
+                  slotId={id}
+                  blackouts={blackouts}
+                  onPickRange={handlePickRange}
+                />
+
 
                 {mode === "single" ? (
                   <form onSubmit={handleSubmit} className="space-y-5 font-mono text-sm">
