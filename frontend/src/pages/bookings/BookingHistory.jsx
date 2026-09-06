@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import API from "../../services/api";
 
 function formatDateTime(value) {
@@ -23,6 +24,14 @@ function formatAmount(value) {
 // cancelBooking guard (only "cancelled" and "completed" are blocked).
 const CANCELLABLE_STATUSES = ["pending", "confirmed", "active"];
 
+// Only a booking that's actually live right now (paid, or checked in) can
+// be extended — matches the guard in paymentRoutes.js's create-extend-session.
+const EXTENDABLE_STATUSES = ["confirmed", "active"];
+
+// How many hours a renter can pick from in the extend dropdown.
+// Keep this <= MAX_EXTEND_HOURS in backend/routes/paymentRoutes.js.
+const EXTEND_HOUR_OPTIONS = [1, 2, 3, 4, 5, 6];
+
 function BookingHistory() {
   const [bookings, setBookings] = useState([]);
   const [status, setStatus] = useState("all");
@@ -32,8 +41,13 @@ function BookingHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [cancellingId, setCancellingId] = useState(null);
+  const [extendingId, setExtendingId] = useState(null);
   const [actionError, setActionError] = useState("");
   const [expandedId, setExpandedId] = useState(null);
+
+  // Tracks the currently-selected "hours to extend by" per booking row.
+  // Defaults to 1 hour for any booking not yet touched.
+  const [extendHoursById, setExtendHoursById] = useState({});
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -98,6 +112,49 @@ function BookingHistory() {
       setActionError(err.response?.data?.message || "Failed to cancel booking.");
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  const getExtendHours = (bookingId) => extendHoursById[bookingId] || 1;
+
+  const setExtendHours = (bookingId, hours) => {
+    setExtendHoursById((current) => ({ ...current, [bookingId]: hours }));
+  };
+
+  // "Extend my stay" — renter picks how many hours from the dropdown, we ask
+  // the backend for a quote + Stripe checkout session for that many hours,
+  // confirm the price, then redirect to Stripe. No full booking form needed.
+  const handleExtend = async (bookingId) => {
+    const hours = getExtendHours(bookingId);
+
+    setActionError("");
+    setExtendingId(bookingId);
+    try {
+      const res = await API.post("/payments/create-extend-session", {
+        bookingId,
+        hours,
+      });
+
+      const { url, extraAmount, newEndTime, hours: confirmedHours } = res.data;
+
+      const confirmed = window.confirm(
+        `Extend this booking by ${confirmedHours} hour(s) (until ${new Date(
+          newEndTime
+        ).toLocaleString()}) for $${extraAmount}?\n\nYou'll be redirected to Stripe to pay.`
+      );
+
+      if (!confirmed) {
+        setExtendingId(null);
+        return;
+      }
+
+      window.location.href = url;
+    } catch (err) {
+      setActionError(
+        err.response?.data?.error ||
+          "Could not extend this booking. That many hours may already be booked on this slot."
+      );
+      setExtendingId(null);
     }
   };
 
@@ -233,6 +290,7 @@ function BookingHistory() {
                 <tr>
                   <th className="p-3">Booking ID</th>
                   <th className="p-3">Slot ID</th>
+                  <th className="p-3">Series</th>
                   <th className="p-3">Start</th>
                   <th className="p-3">End</th>
                   <th className="p-3">Status</th>
@@ -246,6 +304,7 @@ function BookingHistory() {
                 {bookings.map((booking) => {
                   const snapshot = booking.pricingSnapshot;
                   const isExpanded = expandedId === booking._id;
+                  const canExtend = EXTENDABLE_STATUSES.includes(booking.status);
 
                   return (
                     <>
@@ -259,6 +318,20 @@ function BookingHistory() {
 
                         <td className="p-3">
                           {String(booking.slotId?._id || booking.slotId || "—")}
+                        </td>
+
+                        <td className="p-3">
+                          {booking.seriesId ? (
+                            <Link
+                              to="/bookings/recurring"
+                              className="underline font-bold uppercase text-purple-700"
+                              title="Part of a recurring booking series"
+                            >
+                              Recurring
+                            </Link>
+                          ) : (
+                            <span className="text-gray-400">One-time</span>
+                          )}
                         </td>
 
                         <td className="p-3">
@@ -292,24 +365,55 @@ function BookingHistory() {
                         </td>
 
                         <td className="p-3">
-                          {CANCELLABLE_STATUSES.includes(booking.status) ? (
-                            <button
-                              type="button"
-                              onClick={() => handleCancel(booking._id)}
-                              disabled={cancellingId === booking._id}
-                              className="border-2 border-red-700 px-3 py-1 font-bold uppercase text-red-700 hover:bg-red-700 hover:text-white disabled:opacity-60"
-                            >
-                              {cancellingId === booking._id ? "..." : "Cancel"}
-                            </button>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {canExtend && (
+                              <>
+                                <select
+                                  value={getExtendHours(booking._id)}
+                                  onChange={(event) =>
+                                    setExtendHours(booking._id, Number(event.target.value))
+                                  }
+                                  disabled={extendingId === booking._id}
+                                  className="border-2 border-black p-1 font-bold uppercase disabled:opacity-60"
+                                  title="Hours to extend by"
+                                >
+                                  {EXTEND_HOUR_OPTIONS.map((h) => (
+                                    <option key={h} value={h}>
+                                      {h}hr
+                                    </option>
+                                  ))}
+                                </select>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleExtend(booking._id)}
+                                  disabled={extendingId === booking._id}
+                                  className="border-2 border-black px-3 py-1 font-bold uppercase hover:bg-black hover:text-white disabled:opacity-60"
+                                >
+                                  {extendingId === booking._id ? "..." : "Extend"}
+                                </button>
+                              </>
+                            )}
+
+                            {CANCELLABLE_STATUSES.includes(booking.status) ? (
+                              <button
+                                type="button"
+                                onClick={() => handleCancel(booking._id)}
+                                disabled={cancellingId === booking._id}
+                                className="border-2 border-red-700 px-3 py-1 font-bold uppercase text-red-700 hover:bg-red-700 hover:text-white disabled:opacity-60"
+                              >
+                                {cancellingId === booking._id ? "..." : "Cancel"}
+                              </button>
+                            ) : (
+                              !canExtend && <span className="text-gray-400">—</span>
+                            )}
+                          </div>
                         </td>
                       </tr>
 
                       {isExpanded && snapshot && (
                         <tr key={`${booking._id}-detail`} className="border-b border-black bg-gray-50">
-                          <td colSpan={8} className="p-4 font-mono text-xs">
+                          <td colSpan={9} className="p-4 font-mono text-xs">
                             <div className="flex flex-wrap gap-6">
                               <div>
                                 <p className="text-gray-500 uppercase text-[10px]">Base rate / hr</p>
@@ -350,6 +454,22 @@ function BookingHistory() {
                               <p className="mt-3 text-gray-500 uppercase text-[10px]">
                                 No dynamic pricing rules applied — base rate charged.
                               </p>
+                            )}
+
+                            {snapshot.extensions?.length > 0 && (
+                              <div className="mt-3 space-y-1">
+                                <p className="text-gray-500 uppercase text-[10px] mb-1">
+                                  Extensions
+                                </p>
+                                {snapshot.extensions.map((ext, i) => (
+                                  <div key={i} className="flex justify-between max-w-md">
+                                    <span>
+                                      +{ext.hours}hr until {formatDateTime(ext.extendedTo)}
+                                    </span>
+                                    <span>${ext.extraAmount}</span>
+                                  </div>
+                                ))}
+                              </div>
                             )}
                           </td>
                         </tr>

@@ -22,6 +22,17 @@ const bookingSchema = new mongoose.Schema(
       default: null,
     },
 
+    // If this booking was created as part of a recurring booking series
+    // (see models/BookingSeries.js), this points back to that series so
+    // occurrences can be grouped, displayed, and cancelled together. Null
+    // for a normal one-off booking.
+    seriesId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "BookingSeries",
+      default: null,
+      index: true,
+    },
+
     startTime: {
       type: Date,
       required: true,
@@ -58,6 +69,23 @@ const bookingSchema = new mongoose.Schema(
     // even if those rules are edited or deleted later.
     pricingSnapshot: {
       type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+
+    // Only set for "pending" bookings. If payment (Stripe or subscription
+    // hours) isn't completed by this time, utils/bookingExpiry.js's sweep
+    // will cancel the booking and free the slot. Null for bookings that
+    // are already confirmed/active/completed/cancelled.
+    expiresAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+
+    // Set when a booking is cancelled automatically (e.g. "expired_unpaid")
+    // rather than by the renter/admin, so the reason isn't lost.
+    cancelReason: {
+      type: String,
       default: null,
     },
 

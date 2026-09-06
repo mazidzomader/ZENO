@@ -34,7 +34,22 @@ export const sidebarItems = [
     id: "bookings",
     title: "Bookings",
     icon: "Calendar",
-    path: "/bookings/history"
+    path: "/bookings/history",
+    roles: ["renter", "admin"], // a renter's own reservations
+  },
+  {
+    id: "recurring-bookings",
+    title: "Recurring Bookings",
+    icon: "Repeat",
+    path: "/bookings/recurring",
+    roles: ["renter", "admin"],
+  },
+  {
+    id: "owner-bookings",
+    title: "Slot Bookings",
+    icon: "Calendar",
+    path: "/bookings/owner",
+    roles: ["owner"], // who's renting the owner's slots
   },
   {
     id: "navigation",

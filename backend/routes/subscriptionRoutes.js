@@ -294,6 +294,15 @@ router.post("/use-hours", protect, async (req, res) => {
       return res.status(404).json({ error: "Booking not found or already paid." });
     }
 
+    // The payment window may have just passed (see utils/bookingExpiry.js).
+    // Block using hours on a booking that's about to be (or already was)
+    // auto-cancelled.
+    if (booking.expiresAt && new Date(booking.expiresAt) <= new Date()) {
+      return res.status(410).json({
+        error: "This booking's payment window has expired. The slot has been released — please book again.",
+      });
+    }
+
     // Calculate booking duration in hours
     const durationMs = new Date(booking.endTime) - new Date(booking.startTime);
     const durationH = parseFloat((durationMs / (1000 * 60 * 60)).toFixed(2));

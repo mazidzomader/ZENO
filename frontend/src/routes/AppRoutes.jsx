@@ -2,6 +2,7 @@ import BrowseSlots from "../pages/slots/BrowseSlots";
 import { Routes, Route, Navigate } from "react-router-dom";
 import BookingHistory from "../pages/bookings/BookingHistory";
 import OwnerBookings from "../pages/bookings/OwnerBookings";
+import RecurringBookings from "../pages/bookings/RecurringBookings";
 
 import Home from "../pages/Home";
 import Login from "../pages/Login";
@@ -16,6 +17,7 @@ import { CollectionGridView } from "../pages/collections/CollectionGridView";
 import MySlots from "../pages/slots/MySlots";
 import SlotForm from "../pages/slots/SlotForm";
 import BulkSlotForm from "../pages/slots/BulkSlotForm";
+import SlotBlackouts from "../pages/slots/SlotBlackouts";
 import ManageBuildings from "../pages/buildings/ManageBuildings";
 // Feature 02 — Slot Booking & Reservation
 import BookSlot from "../pages/bookings/BookSlot";
@@ -51,7 +53,9 @@ import Navigation from "../pages/Navigation";
 import PaymentsPage from "../pages/payment/PaymentsPage";
 import PaymentSuccess from "../pages/payment/PaymentSuccess";
 import PaymentCancel from "../pages/payment/PaymentCancel";
+import BulkPaymentSuccess from "../pages/payment/BulkPaymentSuccess";
 
+import ExtendSuccess from "../pages/payment/ExtendSuccess";
 // Feature — Subscription Plans (Isolated)
 import SubscriptionPage from "../pages/subscription/SubscriptionPage";
 import SubscriptionSuccess from "../pages/subscription/SubscriptionSuccess";
@@ -81,6 +85,9 @@ function AppRoutes() {
         {/* Owner — see who's booked into their slots */}
         <Route path="/bookings/owner" element={<OwnerBookings />} />
 
+        {/* Recurring / repeating bookings management */}
+        <Route path="/bookings/recurring" element={<RecurringBookings />} />
+
         {/* Feature 07 — Navigation */}
         <Route path="/navigation" element={<Navigation />} />
 
@@ -99,6 +106,7 @@ function AppRoutes() {
         <Route path="/slots/new" element={<SlotForm />} />
         <Route path="/slots/:id/edit" element={<SlotForm />} />
         <Route path="/slots/bulk" element={<BulkSlotForm />} />
+        <Route path="/slots/:id/blackouts" element={<SlotBlackouts />} />
         <Route path="/buildings/manage" element={<ManageBuildings />} />
            
         {/* Feature 02 — Slot Booking & Reservation */}
@@ -141,7 +149,8 @@ function AppRoutes() {
       {/* Payment redirect pages — outside DashboardLayout (full-screen, no sidebar) */}
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/cancel" element={<PaymentCancel />} />
-
+      <Route path="/payment/extend-success" element={<ExtendSuccess />} />
+      <Route path="/payment/bulk-success" element={<BulkPaymentSuccess />} />
       {/* Subscription redirect pages — outside DashboardLayout */}
       <Route path="/subscription/success" element={<SubscriptionSuccess />} />
       <Route path="/subscription/cancel" element={<SubscriptionCancel />} />
