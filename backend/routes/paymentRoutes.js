@@ -13,6 +13,7 @@ const Stripe = require("stripe");
 const mongoose = require("mongoose");
 const { protect } = require("../middleware/authMiddleware");
 const { createNotification } = require('../services/notificationService');
+const OverstayPenalty = require('../models/OverstayPenalty');
 
 // Lazy Stripe initialization — deferred until first request so that
 // dotenv.config() in server.js has already populated process.env.
@@ -281,6 +282,34 @@ router.post("/verify-session", protect, async (req, res) => {
     }
   } catch (err) {
     console.error("verify-session error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/payments/verify-penalty-session
+router.post("/verify-penalty-session", protect, async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    const session = await getStripe().checkout.sessions.retrieve(sessionId, {
+      expand: ["payment_intent"],
+    });
+    if (session.payment_status !== "paid") {
+      return res.status(402).json({ error: "Payment not completed." });
+    }
+    const penaltyId = session.metadata?.penaltyId;
+    if (!penaltyId) return res.status(400).json({ error: "Missing penaltyId." });
+
+    const penalty = await OverstayPenalty.findById(penaltyId);
+    if (!penalty) return res.status(404).json({ error: "Penalty not found." });
+    if (penalty.paid) return res.json({ success: true, alreadyPaid: true });
+
+    penalty.paid = true;
+    await penalty.save();
+
+    // (Optional) also create a payment record or notification
+
+    res.json({ success: true });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
