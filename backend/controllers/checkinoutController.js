@@ -108,6 +108,7 @@ exports.checkOut = async (req, res) => {
         penaltyAmount: Math.round(penaltyAmount * 100) / 100,
         penaltyRatePerHour: Math.round(penaltyRate * 100) / 100,
         notes: `Overstay of ${overstayMinutes} minutes beyond booked end time.`,
+        paid: false,
       });
       await penalty.save();
       

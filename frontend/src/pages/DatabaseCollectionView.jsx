@@ -46,7 +46,11 @@ export function DatabaseCollectionView() {
         }
       });
     });
-    return Array.from(allKeys);
+    const cols = Array.from(allKeys);
+    if (collectionName === "overstaypenalties") {
+      cols.push("Actions");
+    }
+    return cols;
   };
 
   const columns = getColumns();
@@ -60,6 +64,15 @@ export function DatabaseCollectionView() {
       return JSON.stringify(val);
     }
     return String(val);
+  };
+
+  const handlePayPenalty = async (penaltyId) => {
+    try {
+      const res = await API.post(`/checkinout/penalty/${penaltyId}/pay`);
+      window.location.href = res.data.url;
+    } catch (err) {
+      alert(err.response?.data?.error || 'Payment initiation failed.');
+    }
   };
 
   // Convert slug back to correct visual title
@@ -141,15 +154,36 @@ export function DatabaseCollectionView() {
                   key={row._id || idx}
                   className="border-b border-ink/20 last:border-b-0 hover:bg-bgAlt/25 transition-colors"
                 >
-                  {columns.map((col) => (
-                    <td
-                      key={col}
-                      className="p-3 border-r border-ink/10 last:border-r-0 truncate max-w-xs"
-                      title={formatCell(row[col])}
-                    >
-                      {formatCell(row[col])}
-                    </td>
-                  ))}
+                  {columns.map((col) => {
+                    // Custom cell for "Actions" column on overstaypenalties
+                    if (col === "Actions" && collectionName === "overstaypenalties") {
+                      const isPaid = row.paid === true;
+                      return (
+                        <td key={col} className="p-3 border-r border-ink/10 last:border-r-0">
+                          {isPaid ? (
+                            <span className="font-mono text-xs text-safe font-bold">PAID</span>
+                          ) : (
+                            <button
+                              onClick={() => handlePayPenalty(row._id)}
+                              className="border-2 border-ink px-3 py-1 font-mono text-xs hover:bg-ink hover:text-bgBase transition-colors"
+                            >
+                              PAY
+                            </button>
+                          )}
+                        </td>
+                      );
+                    }
+                    // Default cell for all other columns
+                    return (
+                      <td
+                        key={col}
+                        className="p-3 border-r border-ink/10 last:border-r-0 truncate max-w-xs"
+                        title={formatCell(row[col])}
+                      >
+                        {formatCell(row[col])}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
