@@ -345,6 +345,79 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* Feature 11 — Occupancy / Peak Usage / Per-slot Analytics */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="border-2 border-ink p-6 bg-bgBase">
+                  <div className="flex items-center justify-between border-b-2 border-ink pb-3">
+                    <h3 className="font-display font-extrabold text-lg uppercase text-ink">Occupancy Rate</h3>
+                    <span className="font-mono text-xl font-black">{summary.occupancyRate || 0}%</span>
+                  </div>
+                  <div className="mt-5 h-6 border-2 border-ink bg-bgAlt overflow-hidden">
+                    <div
+                      className="h-full bg-highlight"
+                      style={{ width: `${Math.min(100, Number(summary.occupancyRate || 0))}%` }}
+                    />
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-3 font-mono text-[10px] uppercase">
+                    <div className="border border-ink p-3"><b>{summary.occupiedSlots || 0}</b><br />Occupied</div>
+                    <div className="border border-ink p-3"><b>{summary.reservedSlots || 0}</b><br />Reserved</div>
+                    <div className="border border-ink p-3"><b>{summary.availableSlots || 0}</b><br />Available</div>
+                  </div>
+                </div>
+
+                <div className="border-2 border-ink p-6 bg-bgBase">
+                  <div className="border-b-2 border-ink pb-3">
+                    <h3 className="font-display font-extrabold text-lg uppercase text-ink">Peak Usage Hours</h3>
+                  </div>
+                  <div className="mt-5 flex flex-col gap-3">
+                    {summary.peakUsageHours?.length ? summary.peakUsageHours.map((item) => {
+                      const max = Math.max(...summary.peakUsageHours.map((x) => x.bookings), 1);
+                      return (
+                        <div key={item.hour} className="font-mono text-[10px] uppercase">
+                          <div className="flex justify-between mb-1"><span>{item.label}</span><b>{item.bookings} booking(s)</b></div>
+                          <div className="h-4 border border-ink bg-bgAlt">
+                            <div className="h-full bg-ink" style={{ width: `${(item.bookings / max) * 100}%` }} />
+                          </div>
+                        </div>
+                      );
+                    }) : (
+                      <p className="font-mono text-xs text-inkMuted uppercase">No booking-hour data yet.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-2 border-ink bg-bgBase overflow-x-auto">
+                <div className="p-5 border-b-2 border-ink flex items-center justify-between">
+                  <h3 className="font-display font-extrabold text-lg uppercase text-ink">Per-Slot Performance</h3>
+                  <span className="font-mono text-[10px] uppercase">Active: {summary.activeBookings || 0} | Completed: {summary.completedBookings || 0}</span>
+                </div>
+                <table className="w-full border-collapse font-mono text-xs">
+                  <thead className="bg-ink text-bgBase uppercase">
+                    <tr>
+                      <th className="p-3 text-left">Slot</th>
+                      <th className="p-3 text-left">Floor</th>
+                      <th className="p-3 text-left">Status</th>
+                      <th className="p-3 text-left">Bookings</th>
+                      <th className="p-3 text-left">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summary.perSlotPerformance?.length ? summary.perSlotPerformance.map((slot) => (
+                      <tr key={String(slot.slotId)} className="border-b border-ink">
+                        <td className="p-3 font-bold">{slot.slotNumber || '—'}</td>
+                        <td className="p-3">{slot.floor ?? '—'}</td>
+                        <td className="p-3 uppercase">{slot.status || 'unknown'}</td>
+                        <td className="p-3">{slot.bookings || 0}</td>
+                        <td className="p-3 font-bold">${Number(slot.revenue || 0).toLocaleString()}</td>
+                      </tr>
+                    )) : (
+                      <tr><td colSpan="5" className="p-8 text-center uppercase text-inkMuted">No owned slots found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
               {/* Split Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Left Column: Profile Details & Editing */}
