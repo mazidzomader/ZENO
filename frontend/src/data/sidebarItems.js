@@ -19,16 +19,18 @@ export const sidebarItems = [
     path: "/collections/vehicles"
   },
   {
-    id: "buildings",
-    title: "Buildings",
-    icon: "Building",
-    path: "/collections/buildings"
+    id: "browse-slots",
+    title: "Browse Slots",
+    icon: "Grid",
+    path: "/slots/browse",
+    roles: ["renter", "admin"], // renters browse & book available slots
   },
   {
-    id: "parkingslots",
-    title: "Parking Slots",
+    id: "my-slots",
+    title: "My Slots",
     icon: "Grid",
-    path: "/collections/parkingslots"
+    path: "/slots/mine",
+    roles: ["owner", "admin"], // owners manage the slots they list
   },
   {
     id: "bookings",
