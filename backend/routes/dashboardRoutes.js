@@ -70,7 +70,7 @@ router.get("/summary", protect, async (req, res) => {
       const buildingIds = buildings.map((b) => b._id);
 
       // 2. Fetch slots in these buildings
-      const slots = await db.collection("parkingslots").find({ buildingId: { $in: buildingIds } }).toArray();
+      const slots = await db.collection("parkingslots").find({ building: { $in: buildingIds } }).toArray();
       const slotIds = slots.map((s) => s._id);
 
       // 3. Fetch bookings for these slots
@@ -90,12 +90,70 @@ router.get("/summary", protect, async (req, res) => {
         bookingId: { $in: bookingIds },
         status: "success"
       }).toArray();
-      const totalEarned = payments.reduce((acc, pay) => acc + pay.amount, 0);
+      const totalEarned = payments.reduce((acc, pay) => acc + Number(pay.amount || 0), 0);
 
-      // 7. Get user profile data to return
+      // 7. Owner analytics: occupancy, peak hours, and per-slot performance
+      const totalSlots = slots.length;
+      const occupiedSlots = slots.filter((slot) => slot.status === "occupied").length;
+      const reservedSlots = slots.filter((slot) => slot.status === "reserved").length;
+      const availableSlots = slots.filter((slot) => slot.status === "available").length;
+      const occupancyRate = totalSlots > 0
+        ? Number(((occupiedSlots / totalSlots) * 100).toFixed(1))
+        : 0;
+
+      const activeBookings = bookings.filter((booking) =>
+        ["confirmed", "active"].includes(booking.status)
+      ).length;
+      const completedBookings = bookings.filter((booking) => booking.status === "completed").length;
+
+      const hourlyCounts = Array.from({ length: 24 }, () => 0);
+      bookings.forEach((booking) => {
+        const start = booking.startTime ? new Date(booking.startTime) : null;
+        if (start && !Number.isNaN(start.getTime())) {
+          hourlyCounts[start.getHours()] += 1;
+        }
+      });
+      const peakUsageHours = hourlyCounts
+        .map((count, hour) => ({
+          hour,
+          label: `${String(hour).padStart(2, "0")}:00`,
+          bookings: count,
+        }))
+        .filter((item) => item.bookings > 0)
+        .sort((a, b) => b.bookings - a.bookings || a.hour - b.hour)
+        .slice(0, 5);
+
+      const paidAmountByBooking = new Map();
+      payments.forEach((payment) => {
+        const key = String(payment.bookingId);
+        paidAmountByBooking.set(
+          key,
+          (paidAmountByBooking.get(key) || 0) + Number(payment.amount || 0)
+        );
+      });
+
+      const perSlotPerformance = slots.map((slot) => {
+        const slotBookings = bookings.filter(
+          (booking) => String(booking.slotId) === String(slot._id)
+        );
+        const revenue = slotBookings.reduce(
+          (sum, booking) => sum + (paidAmountByBooking.get(String(booking._id)) || 0),
+          0
+        );
+        return {
+          slotId: slot._id,
+          slotNumber: slot.slotNumber,
+          floor: slot.floor,
+          status: slot.status,
+          bookings: slotBookings.length,
+          revenue,
+        };
+      }).sort((a, b) => b.bookings - a.bookings || b.revenue - a.revenue);
+
+      // 8. Get user profile data to return
       const userDoc = await db.collection("users").findOne({ _id: userId });
 
-      // 8. Fetch the 3 most recent reviews for the owner reviews feed
+      // 9. Fetch the 3 most recent reviews for the owner reviews feed
       const recentReviews = [];
       const sortedReviews = [...reviews].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       for (const rev of sortedReviews.slice(0, 3)) {
@@ -113,9 +171,17 @@ router.get("/summary", protect, async (req, res) => {
         role: "owner",
         avgRating,
         totalBuildings: buildings.length,
-        totalSlots: slots.length,
+        totalSlots,
         totalBookings: bookings.length,
         totalEarned,
+        occupiedSlots,
+        reservedSlots,
+        availableSlots,
+        occupancyRate,
+        activeBookings,
+        completedBookings,
+        peakUsageHours,
+        perSlotPerformance,
         recentReviews,
         profile: {
           address: userDoc.address || "",
