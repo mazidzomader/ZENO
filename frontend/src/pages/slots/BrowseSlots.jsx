@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import API from "../../services/api";
+import Layout from "../../components/Layout";
 
 function getBuildingDetails(slot) {
   const building = slot.building || slot.buildingId;
@@ -367,10 +368,15 @@ function BrowseSlots() {
   const collapseAll = () => setOpenBuildings({});
 
   return (
-    <div className="w-full text-[#111111]">
-      <section className="mx-auto max-w-7xl">
+    <Layout>
+      <main className="min-h-screen bg-[#eceae5] px-6 py-10 text-[#111111]">
+        <section className="mx-auto max-w-7xl">
           <div className="border-b-4 border-black pb-6">
-            <h1 className="text-4xl font-black uppercase md:text-6xl">
+            <p className="font-mono text-xs uppercase tracking-[0.25em]">
+              Feature 01 // Listing & Browsing
+            </p>
+
+            <h1 className="mt-3 text-4xl font-black uppercase md:text-6xl">
               Find a Parking Space
             </h1>
 
@@ -522,7 +528,8 @@ function BrowseSlots() {
             </div>
           )}
         </section>
-    </div>
+      </main>
+    </Layout>
   );
 }
 
