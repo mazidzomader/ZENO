@@ -26,33 +26,59 @@ const buildFilter = async (collectionName, user, db) => {
   }
 
   // Owners see everything except reviews which are scoped to their slots
-  if (user.role === "owner") {
-    if (collectionName === "reviews") {
-      const buildings = await db
-        .collection("buildings")
-        .find({ ownerId: user._id }, { projection: { _id: 1 } })
-        .toArray();
+  // Owners see everything except reviews and overstay penalties (which are scoped)
+if (user.role === "owner") {
+  // Reviews: only for their buildings
+  if (collectionName === "reviews") {
+    const buildings = await db
+      .collection("buildings")
+      .find({ ownerId: user._id }, { projection: { _id: 1 } })
+      .toArray();
 
-      const slots = await db
-        .collection("parkingslots")
-        .find(
-          { buildingId: { $in: buildings.map((b) => b._id) } },
-          { projection: { _id: 1 } }
-        )
-        .toArray();
+    const slots = await db
+      .collection("parkingslots")
+      .find(
+        { buildingId: { $in: buildings.map((b) => b._id) } },
+        { projection: { _id: 1 } }
+      )
+      .toArray();
 
-      const bookings = await db
-        .collection("bookings")
-        .find(
-          { slotId: { $in: slots.map((s) => s._id) } },
-          { projection: { _id: 1 } }
-        )
-        .toArray();
+    const bookings = await db
+      .collection("bookings")
+      .find(
+        { slotId: { $in: slots.map((s) => s._id) } },
+        { projection: { _id: 1 } }
+      )
+      .toArray();
 
-      return { bookingId: { $in: bookings.map((b) => b._id) } };
-    }
-    return {};
+    return { bookingId: { $in: bookings.map((b) => b._id) } };
   }
+
+  // Overstay penalties: only for their buildings
+  if (collectionName === "overstaypenalties") {
+    const buildings = await db
+      .collection("buildings")
+      .find({ ownerId: user._id }, { projection: { _id: 1 } })
+      .toArray();
+    const buildingIds = buildings.map((b) => b._id);
+
+    const slots = await db
+      .collection("parkingslots")
+      .find({ buildingId: { $in: buildingIds } }, { projection: { _id: 1 } })
+      .toArray();
+    const slotIds = slots.map((s) => s._id);
+
+    const bookings = await db
+      .collection("bookings")
+      .find({ slotId: { $in: slotIds } }, { projection: { _id: 1 } })
+      .toArray();
+    const bookingIds = bookings.map((b) => b._id);
+
+    return { bookingId: { $in: bookingIds } };
+  }
+
+  return {}; // owners see everything else
+}
 
   // Renter — apply per-collection ownership filters
   const userId = user._id;
