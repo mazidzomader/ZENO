@@ -289,7 +289,7 @@ function BookingHistory() {
               <thead className="bg-black font-mono text-xs uppercase text-white">
                 <tr>
                   <th className="p-3">Booking ID</th>
-                  <th className="p-3">Slot ID</th>
+                  <th className="p-3">Slot</th>
                   <th className="p-3">Series</th>
                   <th className="p-3">Start</th>
                   <th className="p-3">End</th>
@@ -317,8 +317,15 @@ function BookingHistory() {
                         </td>
 
                         <td className="p-3">
-                          {String(booking.slotId?._id || booking.slotId || "—")}
+                          <div className="font-bold">
+                            {booking.slotId?.slotNumber || "—"}
+                          </div>
+                          <div className="text-gray-500">
+                            {booking.slotId?.building?.name || "—"}
+                          </div>
                         </td>
+
+                      
 
                         <td className="p-3">
                           {booking.seriesId ? (

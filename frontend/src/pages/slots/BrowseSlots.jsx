@@ -122,15 +122,15 @@ function SlotCard({ slot }) {
       <div className="mt-3 grid grid-cols-3 gap-2 text-center font-mono">
         <div className="border border-black p-1.5">
           <p className="text-[9px] uppercase">Hour</p>
-          <p className="mt-0.5 font-bold text-xs">৳{hourlyRate}</p>
+          <p className="mt-0.5 font-bold text-xs">${hourlyRate}</p>
         </div>
         <div className="border border-black p-1.5">
           <p className="text-[9px] uppercase">Day</p>
-          <p className="mt-0.5 font-bold text-xs">৳{dailyRate}</p>
+          <p className="mt-0.5 font-bold text-xs">${dailyRate}</p>
         </div>
         <div className="border border-black p-1.5">
           <p className="text-[9px] uppercase">Month</p>
-          <p className="mt-0.5 font-bold text-xs">৳{monthlyRate}</p>
+          <p className="mt-0.5 font-bold text-xs">${monthlyRate}</p>
         </div>
       </div>
 
