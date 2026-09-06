@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useAuth } from "../context/AuthContext";
 import API from "../services/api";
@@ -50,7 +51,8 @@ function EyeIcon({ crossed }) {
 }
 
 function Home() {
-  const { login } = useAuth();
+  const navigate = useNavigate();
+  const { user, login, logout } = useAuth();
 
   useEffect(() => {
     document.title = "ZENO";
@@ -227,6 +229,7 @@ function Home() {
         login(res.data.user, res.data.token);
         setAuthNotice("ACCESS_GRANTED");
         setAuthData({ name: "", email: "", password: "", confirm: "" });
+        navigate("/dashboard");
       } else {
         await API.post("/auth/register", {
           name: authData.name,
@@ -273,10 +276,10 @@ function Home() {
               </p>
             </div>
 
-            <div className="mt-12 flex items-center space-x-4">
-              <a
-                href="/slots/browse"
-                className="border-2 border-ink bg-transparent text-ink px-8 py-4 font-mono font-bold uppercase tracking-widest hover:bg-ink hover:text-bgBase flex items-center group"
+            <div className="mt-12 flex flex-wrap items-center gap-4">
+              <Link
+                to="/slots/browse"
+                className="border-2 border-ink bg-transparent text-ink px-8 py-4 font-mono font-bold uppercase tracking-widest hover:bg-ink hover:text-bgBase flex items-center group transition-colors"
               >
                 Find a Space
                 <svg
@@ -292,7 +295,28 @@ function Home() {
                     d="M14 5l7 7m0 0l-7 7m7-7H3"
                   ></path>
                 </svg>
-              </a>
+              </Link>
+              {user && (
+                <Link
+                  to="/dashboard"
+                  className="border-2 border-ink bg-ink text-bgBase px-8 py-4 font-mono font-bold uppercase tracking-widest hover:bg-highlight hover:text-ink flex items-center group transition-colors shadow-[4px_4px_0px_0px_rgba(17,17,17,0.3)]"
+                >
+                  Dashboard
+                  <svg
+                    className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="square"
+                      strokeLinejoin="miter"
+                      strokeWidth="2"
+                      d="M14 5l7 7m0 0l-7 7m7-7H3"
+                    ></path>
+                  </svg>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -918,7 +942,66 @@ function Home() {
 
       {/* ================= AUTH ================= */}
       <section id="auth" className="bg-bgAlt py-20 px-8">
-        <div className="max-w-md mx-auto border-4 border-ink bg-bgBase shadow-[8px_8px_0px_0px_rgba(17,17,17,1)]">
+        {user ? (
+          <div className="max-w-md mx-auto border-4 border-ink bg-bgBase shadow-[8px_8px_0px_0px_rgba(17,17,17,1)]">
+            <div className="bg-ink text-bgBase px-4 py-2 font-mono text-xs uppercase font-bold flex justify-between items-center">
+              <span>ACTIVE_SESSION</span>
+              <span className="flex items-center space-x-1 text-safe">
+                <span className="w-2 h-2 bg-safe mr-1 animate-blink"></span> ONLINE
+              </span>
+            </div>
+
+            <div className="p-8 md:p-10 font-mono">
+              <div className="border-2 border-safe bg-safe/10 text-safe font-bold uppercase text-xs px-3 py-2 mb-6">
+                [AUTH_ACTIVE] Currently logged in as {user.name}
+              </div>
+
+              <div className="space-y-3 text-xs mb-8">
+                <div className="flex justify-between border-b border-ink/20 pb-2">
+                  <span className="text-inkMuted uppercase">Operator:</span>
+                  <span className="font-bold">{user.name}</span>
+                </div>
+                <div className="flex justify-between border-b border-ink/20 pb-2">
+                  <span className="text-inkMuted uppercase">Email:</span>
+                  <span className="font-bold">{user.email}</span>
+                </div>
+                <div className="flex justify-between border-b border-ink/20 pb-2">
+                  <span className="text-inkMuted uppercase">Role:</span>
+                  <span className="font-bold uppercase text-alert">{user.role || "User"}</span>
+                </div>
+              </div>
+
+              <Link
+                to="/dashboard"
+                className="w-full bg-ink text-bgBase font-bold uppercase p-4 hover:bg-highlight hover:text-ink border-2 border-ink flex items-center justify-center group mb-3 transition-colors text-sm"
+              >
+                Go to Dashboard
+                <svg
+                  className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="square"
+                    strokeLinejoin="miter"
+                    strokeWidth="2"
+                    d="M14 5l7 7m0 0l-7 7m7-7H3"
+                  ></path>
+                </svg>
+              </Link>
+
+              <button
+                type="button"
+                onClick={logout}
+                className="w-full border-2 border-ink p-3 hover:bg-alert hover:text-bgBase uppercase font-bold text-xs transition-colors"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="max-w-md mx-auto border-4 border-ink bg-bgBase shadow-[8px_8px_0px_0px_rgba(17,17,17,1)]">
           <div className="bg-ink text-bgBase px-4 py-2 font-mono text-xs uppercase font-bold flex justify-between">
             <span>ACCOUNT_ACCESS</span>
             <span className="flex space-x-2">
@@ -1094,6 +1177,7 @@ function Home() {
             </div>
           </div>
         </div>
+      )}
       </section>
     </Layout>
   );
