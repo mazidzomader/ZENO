@@ -8,6 +8,8 @@
 \usepackage{enumitem}
 \usepackage{float}
 \usepackage{caption}
+\usepackage{graphicx}
+\graphicspath{{ScreenShots/}}
 
 % Set strictly black text and hyperlinks throughout the document
 \hypersetup{
@@ -20,6 +22,8 @@
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt}
+\setlength{\fboxsep}{0pt}
+\setlength{\fboxrule}{0.5pt}
 
 \begin{document}
 
@@ -104,20 +108,26 @@ ZENO is designed for three distinct user groups:
 % ==============================================================================
 \section{Functional Requirements}
 
+\subsection{Home and Landing Page}
+The Home and Landing Page serves as the primary welcoming portal and informational showcase for the ZENO platform. Visitors are greeted with a modern hero presentation emphasizing streamlined parking discovery and real estate monetization. The page displays an interactive overview of prevailing sector rates, allowing prospective users to compare parking fees across urban districts before signing in. It provides prominent calls to action directing commuters toward immediate booking and property owners toward facility onboarding. Active account holders can also use quick-access navigation triggers to reach their personalized consoles and active passes. This public interface establishes an engaging first impression while efficiently routing traffic toward core application services.
+
+\subsection{User Authentication and Registration}
+The User Authentication and Registration system manages secure identity verification and onboarding for all platform participants. New users can create accounts as either vehicle renters or parking facility owners through intuitive signup forms. The module validates email formats, enforces strong password security, and encrypts credentials using salted bcrypt hashing algorithms. Upon successful login, the server issues signed JSON Web Tokens (JWT) that preserve session state across client interactions. Role-based access control rules guarantee that administrative and host capabilities remain restricted to authorized accounts. This foundational security layer prevents unauthorized profile access while maintaining a smooth sign-in flow for regular users.
+
+\subsection{Renter Profile and Vehicle Management}
+The Renter Profile and Vehicle Management module allows drivers to maintain accurate personal and vehicle credentials in one place. Users can save multiple vehicles under their profile by specifying license plate numbers, vehicle models, and categories. Having pre-saved vehicle profiles accelerates the checkout workflow by populating parking passes with verified vehicle data. Drivers can also update contact information, review saved payment methods, and monitor past reservation histories. Storing verified license plates helps security staff authenticate vehicles arriving at parking gates quickly. This self-service portal creates an organized and trustworthy environment for regular commuters.
+
+\subsection{Search and Filter System}
+The Search and Filter system enables drivers to locate suitable parking spots matching their exact logistical criteria within seconds. Users can search by destination area, landmark name, or street address using responsive autocomplete suggestions. Filter options allow sorting by hourly price, vehicle compatibility, covered versus uncovered spaces, and user ratings. The results view switches smoothly between an interactive map perspective and a structured listing view. Inactive or fully booked facilities are flagged clearly so drivers do not waste time browsing unavailable choices. This focused discovery pipeline significantly reduces urban parking search frustration.
+
 \subsection{Map and Navigation}
 The Map and Navigation module provides an interactive visual representation of all registered parking premises using Leaflet mapping tools. Users can view nearby parking zones based on their current GPS coordinates or by panning across the city map. Each location pin displays the building name, exact distance, and number of available spots. Clicking a pin opens a detailed modal with driving directions and address guidance. The system updates marker states dynamically so drivers do not navigate toward fully occupied locations. This visual approach shortens search time and makes reaching the parking facility effortless.
 
-\subsection{Payment}
-The Payment feature delivers a frictionless and protected checkout experience for hourly bookings and overdue penalty fees. It integrates reliable digital payment gateways such as Stripe and SSLCommerz to handle debit cards, credit cards, and mobile financial services. When a driver confirms a reservation, the system computes the exact payable total including applicable taxes and processing fees. All sensitive transaction details are handled through encrypted channels without saving raw card numbers on the server. After payment confirmation, the transaction record is instantly stored in the database. Both the renter and the building owner receive immediate financial updates.
+\subsection{Listing Booking History}
+The Listing Booking History feature tracks recently booked parking facilities and active reservations for renters across their commuting sessions. As drivers reserve and utilize parking spaces across different facilities, the system automatically logs their recent booking records into an accessible chronological ledger. Renters can quickly inspect their past reservations, review booking timestamps, and re-book previously utilized parking bays without needing to re-enter search locations or re-apply complex filters. Each entry in the booking history displays the building name, slot designation, scheduled time window, total fare paid, and real-time status. Users can filter records by status and date or perform quick actions such as session extensions or cancellations directly from the panel. This feature streamlines expense tracking and simplifies repeat reservations for daily commuters.
 
-\subsection{Subscription}
-The Subscription system caters to regular daily commuters seeking uninterrupted long-term parking privileges. Users can browse weekly or monthly recurring passes for specific residential or corporate complexes. The system automatically reserves a dedicated or guaranteed slot for the entire active subscription window. Automated billing cycles notify subscribers before their renewal date to avoid abrupt service loss. If a user cancels or changes plans, the platform updates slot availability immediately upon term expiration. This setup provides predictable revenue for property managers and peace of mind for daily drivers.
-
-\subsection{Reviews and Ratings}
-The Reviews and Ratings system establishes accountability and service quality across all registered parking facilities. Once a completed booking finishes, drivers are invited to submit a star rating alongside a written feedback comment. Renters can comment on lighting conditions, security personnel behavior, accessibility, and slot cleanliness. Building owners can view their aggregate satisfaction score and publicly reply to constructive feedback. Highly rated buildings receive greater prominence across general search listings. This feedback mechanism promotes transparency and helps new drivers choose trustworthy locations.
-
-\subsection{Invoice Generation}
-The Invoice Generation module automates legal financial documentation for every completed monetary transaction. Leveraging server-side PDFKit engines, the system compiles booking duration, slot identifier, building address, and total paid amounts into a clean PDF bill. Every invoice includes a unique serial number, timestamp, and breakdown of baseline fees versus penalties. Users can view and download invoices directly from their booking history dashboard at any time. Building managers can also generate consolidated billing statements for monthly accounting reviews. This built-in reporting guarantees compliance and eliminates manual bookkeeping errors.
+\subsection{Bookmarks and Favourite}
+The Bookmarks and Favourite feature allows drivers to save frequently visited parking spots and buildings for fast, recurring access. Users can tap a heart or bookmark icon on any parking listing card or detail view to add the facility to their personal collection. The dedicated favorites page displays saved locations with live status badges indicating current spot availability and hourly rates. Drivers who commute daily to work or frequent specific shopping centers can bypass standard searches and initiate reservations in seconds. The platform also notifies users if one of their bookmarked facilities introduces temporary promotional discounts or updates its operating hours. This personalization creates a seamless user experience tailored to the regular commuting habits of daily drivers.
 
 \subsection{Building Management}
 The Building Management module enables property administrators to register and maintain residential or commercial parking facilities. Administrators specify property names, physical street addresses, contact numbers, geo-coordinates, and operational guidelines. They can upload site entrance photos and define specific access rules, such as maximum vehicle height or operating hours. The module also allows managers to assign on-premise security supervisors to monitor daily gate operations. Any updates made to building metadata reflect across public renter search results immediately. This feature gives property administrators total digital authority over their physical facilities.
@@ -125,29 +135,44 @@ The Building Management module enables property administrators to register and m
 \subsection{Slot Management}
 The Slot Management feature allows facility administrators to configure and control individual parking bays within each building floor. Administrators can define slot classifications, separating standard sedan spots from compact car, motorcycle, or electric vehicle charging slots. Each slot is given a distinct label, such as Floor-1 Slot A-04, to simplify on-site navigation for drivers. Administrators can mark individual slots as active, undergoing maintenance, or reserved for VIP residents. Real-time availability badges shift status as drivers complete reservations, check in, or vacate the spot. This level of granular control optimizes parking space utilization and prevents accidental overbooking.
 
+\subsection{Bookings Feature}
+The Bookings module oversees the complete lifecycle of temporary vehicle parking reservations directly from managed slot interfaces. Drivers select arrival and departure times, inspect availability schedules, and confirm their slot booking with instant system validation. The system temporarily locks selected slots during checkout to prevent duplicate concurrent reservations by competing users. Once confirmed, the renter receives a booking reference code containing slot location and entry details. Renters can track active, upcoming, and past parking sessions through an organized central dashboard. This robust workflow ensures seamless coordination between arriving drivers and on-site attendants.
+
 \subsection{Dynamic Pricing}
 The Dynamic Pricing engine allows building owners to optimize revenue based on shifting parking demand and specific time slots. Property managers can establish standard baseline hourly rates alongside customized weekend, peak-hour, or nighttime charges. When demand in a commercial district surges during business hours, the system can apply defined surge multipliers automatically. Conversely, off-peak discount rules can be enabled to attract drivers during historically quiet evenings. Renters always review transparent, pre-calculated pricing estimates before completing any checkout. This pricing flexibility maximizes property earnings while maintaining honest pricing transparency.
 
-\subsection{Search and Filter System}
-The Search and Filter system enables drivers to locate suitable parking spots matching their exact logistical criteria within seconds. Users can search by destination area, landmark name, or street address using responsive autocomplete suggestions. Filter options allow sorting by hourly price, vehicle compatibility, covered versus uncovered spaces, and user ratings. The results view switches smoothly between an interactive map perspective and a structured listing view. Inactive or fully booked facilities are flagged clearly so drivers do not waste time browsing unavailable choices. This focused discovery pipeline significantly reduces urban parking search frustration.
+\subsection{Payment}
+The Payment feature delivers a frictionless and protected checkout experience for hourly bookings and overdue penalty fees. It integrates reliable digital payment gateways such as Stripe and SSLCommerz to handle debit cards, credit cards, and mobile financial services. When a driver confirms a reservation, the system computes the exact payable total including applicable taxes and processing fees. All sensitive transaction details are handled through encrypted channels without saving raw card numbers on the server. After payment confirmation, the transaction record is instantly stored in the database. Both the renter and the building owner receive immediate financial updates.
 
-\subsection{Bookings Feature}
-The Bookings module oversees the complete lifecycle of temporary vehicle parking reservations from start to finish. Drivers select arrival and departure times, pick an open parking bay, and confirm their booking with instant validation. The system temporarily locks selected slots during checkout to prevent duplicate concurrent reservations by different users. Once confirmed, the renter receives a booking reference code containing slot location and entry details. Renters can track active, upcoming, and past parking sessions through an organized central dashboard. This robust workflow ensures seamless coordination between arriving drivers and on-site attendants.
+\subsection{Invoice Generation}
+The Invoice Generation module automates legal financial documentation for every completed monetary transaction. Leveraging server-side PDFKit engines, the system compiles booking duration, slot identifier, building address, and total paid amounts into a clean PDF bill. Every invoice includes a unique serial number, timestamp, and breakdown of baseline fees versus penalties. Users can view and download invoices directly from their booking history dashboard at any time. Building managers can also generate consolidated billing statements for monthly accounting reviews. This built-in reporting guarantees compliance and eliminates manual bookkeeping errors.
+
+\subsection{Subscription}
+The Subscription system caters to regular daily commuters seeking uninterrupted long-term parking privileges. Users can browse weekly or monthly recurring passes for specific residential or corporate complexes. The system automatically reserves a dedicated or guaranteed slot for the entire active subscription window. Automated billing cycles notify subscribers before their renewal date to avoid abrupt service loss. If a user cancels or changes plans, the platform updates slot availability immediately upon term expiration. This setup provides predictable revenue for property managers and peace of mind for daily drivers.
+
+\subsection{Check In/Out}
+The Check In/Out system governs the physical arrival and departure verification of vehicles at parking facilities. Facility attendants or automated gate scanners validate arriving drivers using their unique reservation reference codes. Confirming a check-in logs the exact arrival timestamp and switches the slot status to active occupancy in real time. When the driver prepares to leave, the check-out action records the departure time and immediately computes whether the parking session stayed within the reserved window. In cases where a vehicle exceeds its booking duration, the system automatically calculates the overstay fee and prompts instant settlement before gate clearance. Once check-out is complete, the parking bay is released instantly into the public marketplace for incoming drivers.
 
 \subsection{Overstay Detection and Penalty System}
 The Overstay Detection and Penalty System ensures fair parking turnover by discouraging drivers from exceeding their booked duration. The platform continuously compares active reservation end times against physical vehicle check-out records. When a vehicle remains parked past a designated grace period, the system flags the booking as an active overstay. Automatic incremental penalty charges are calculated according to the facility's published overstay rate policy. Renters receive automated alert warnings urging them to extend their reservation or vacate immediately. Outstanding fines must be cleared before the driver can initiate subsequent parking reservations.
 
-\subsection{Admin Control Panel}
-The Admin Control Panel serves as the central command dashboard for system super-administrators overseeing platform health. It aggregates high-level analytics, including total active reservations, platform-wide revenue volume, and total registered vehicles. Administrators possess authorization to verify newly registered building owners and audit suspicious user accounts. The control panel includes moderation tools to resolve disputed payments or investigate flagged user reviews. Real-time diagnostic logs and activity timestamps help administrators maintain operational security and platform integrity. This comprehensive console guarantees complete oversight over day-to-day platform activity.
+\subsection{Reviews and Ratings}
+The Reviews and Ratings system establishes accountability and service quality across all registered parking facilities. Once a completed booking finishes, drivers are invited to submit a star rating alongside a written feedback comment. Renters can comment on lighting conditions, security personnel behavior, accessibility, and slot cleanliness. Building owners can view their aggregate satisfaction score and publicly reply to constructive feedback. Highly rated buildings receive greater prominence across general search listings. This feedback mechanism promotes transparency and helps new drivers choose trustworthy locations.
 
-\subsection{Renter Profile and Vehicle Management}
-The Renter Profile and Vehicle Management module allows drivers to maintain accurate personal and vehicle credentials in one place. Users can save multiple vehicles under their profile by specifying license plate numbers, vehicle models, and categories. Having pre-saved vehicle profiles accelerates the checkout workflow by populating parking passes with verified vehicle data. Drivers can also update contact information, review saved payment methods, and monitor past reservation histories. Storing verified license plates helps security staff authenticate vehicles arriving at parking gates quickly. This self-service portal creates an organized and trustworthy environment for regular commuters.
+\subsection{Booking History}
+The Booking History module delivers an organized chronological ledger of all parking reservations made by a user. Renters can easily navigate between upcoming, active, completed, and cancelled reservations through intuitive status tabs. Each reservation record shows building details, slot designations, vehicle license plates, arrival times, and total costs paid. From this view, drivers can download official PDF receipts, submit post-parking ratings, or request booking cancellation if plans change. The screen also provides a convenient re-book shortcut, allowing frequent commuters to reserve their favorite parking bays again with a single click. This complete transparency ensures users always retain a reliable audit trail for their commuting expenses and personal record-keeping.
 
 \subsection{Notification and Alert System}
 The Notification and Alert System keeps all platform participants informed of critical events through timely digital messages. Renters receive automated reminders thirty minutes prior to booking expiration to help them avoid inadvertent overstay penalties. Property managers receive instantaneous alerts whenever a new reservation, payment settlement, or cancellation occurs in their buildings. Notifications are dispatched via both in-app notification bells and automated email messages using Nodemailer services. Important administrative announcements regarding system maintenance or policy updates are pushed platform-wide. This reliable communication network keeps users updated without requiring constant manual page refreshes.
 
+\subsection{Owner Dashboard}
+The Owner Dashboard provides facility owners and parking hosts with a comprehensive operational command center for their registered properties. Property owners can track real-time slot occupancy across multiple floors and see exactly which bays are currently in use. The dashboard aggregates essential business statistics, including daily earnings, weekly booking volumes, and projected payout totals. Owners can quickly view a roster of currently parked vehicles and incoming reservations for their building. Integrated controls enable hosts to adjust baseline pricing rules, trigger manual maintenance blackouts, or update parking slot configurations directly. This unified interface saves property managers significant administrative time by replacing scattered manual paperwork with a live, automated overview.
+
 \subsection{Reports and Export System}
 The Reports and Export System provides facility administrators with actionable financial and operational intelligence. Property managers can generate structured analytical summaries covering occupancy percentages, peak usage hours, and total revenue collections. Data can be filtered across custom date intervals, individual building floors, or specific parking slot types. The module allows managers to export clean tabular reports into standard CSV and Excel formats for offline audits. Visual bar and line charts make financial trends and revenue dips immediately apparent to stakeholders. These analytical tools empower property owners to make informed business decisions based on factual usage data.
+
+\subsection{Admin Control Panel}
+The Admin Control Panel serves as the central command dashboard for system super-administrators overseeing platform health. It aggregates high-level analytics, including total active reservations, platform-wide revenue volume, and total registered vehicles. Administrators possess authorization to verify newly registered building owners and audit suspicious user accounts. The control panel includes moderation tools to resolve disputed payments or investigate flagged user reviews. Real-time diagnostic logs and activity timestamps help administrators maintain operational security and platform integrity. This comprehensive console guarantees complete oversight over day-to-day platform activity.
 
 % ==============================================================================
 % 3. NON-FUNCTIONAL REQUIREMENTS
@@ -176,25 +201,14 @@ The application codebase must be structured modularly, separating route handlers
 
 The class diagram below outlines the core domain entities of the ZENO platform and their mutual associations. It details the structural relationships between Users, Vehicles, Buildings, Parking Slots, Bookings, Invoices, Payments, Subscriptions, and Penalty records.
 
-\vspace{0.5cm}
+\vspace{0.3cm}
 \begin{figure}[H]
     \centering
-    \setlength{\fboxsep}{10pt}
-    \setlength{\fboxrule}{1pt}
-    \framebox[\textwidth]{
-        \begin{minipage}{0.95\textwidth}
-            \centering
-            \vspace{3.5cm}
-            \textbf{[ CLASS DIAGRAM PLACEHOLDER ]}\\[0.4cm]
-            \textit{Insert formal software engineering class diagram here.}\\
-            \small{(Entities: User, Vehicle, Building, ParkingSlot, Booking, Payment, Subscription, Review, Invoice, Penalty)}
-            \vspace{3.5cm}
-        \end{minipage}
-    }
+    \fbox{\includegraphics[width=\dimexpr\textwidth-2\fboxrule-2\fboxsep\relax]{{Class Diagram}.png}}
     \caption{ZENO Domain Entity Class Diagram}
     \label{fig:class_diagram}
 \end{figure}
-\vspace{0.5cm}
+\vspace{0.3cm}
 
 % ==============================================================================
 % 5. TOOLS AND TECHNOLOGIES
@@ -238,87 +252,154 @@ On the server side, the backend runtime relies on Node.js, which guarantees smoo
 % ==============================================================================
 \section{Implementation: Feature Screenshots}
 
-This section contains dedicated placeholders for application screenshots across all fifteen functional features of ZENO, accompanied by brief descriptions of their operational workflows.
+This section contains visual interfaces and dedicated placeholders across the functional features of ZENO, organized sequentially according to the end-to-end user lifecycle and facility administration workflow.
 
-\subsection{Map and Navigation}
+\subsection{Home and Landing Page}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Map and Navigation Interface ]}}
-    \caption{Interactive Map and Navigation Interface}
+    \fbox{\includegraphics[width=0.85\textwidth]{{HomePage}.png}}
+    \caption{ZENO Public Landing Page and Platform Overview}
 \end{figure}
-\textit{Description:} This interface displays an interactive city map with color-coded building markers indicating available parking locations. Users can click any marker to review building capacity and launch live turn-by-turn driving directions.
+\textit{Description:} The landing page welcomes visitors with real-time parking zone rates, platform feature summaries, and direct calls to action for renters and space owners.
 
-\subsection{Payment}
+\subsection{User Authentication and Registration}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Payment Checkout Interface ]}}
-    \caption{Secure Payment Checkout Screen}
+    \fbox{\includegraphics[width=0.85\textwidth]{{LogIn}.png}}
+    \caption{User Login and Session Authentication Screen}
 \end{figure}
-\textit{Description:} The payment view presents a transparent fare breakdown alongside encrypted card and mobile banking checkout fields. It confirms transactions securely and instantly updates reservation statuses in real time.
-
-\subsection{Subscription}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Subscription Packages Interface ]}}
-    \caption{Recurring Subscription Management Screen}
+    \fbox{\includegraphics[width=0.85\textwidth]{{SignUp}.png}}
+    \caption{New User Registration and Account Creation Screen}
 \end{figure}
-\textit{Description:} This screen lists available weekly and monthly recurring parking passes for regular commuters. Drivers can activate, renew, or cancel long-term parking privileges with automated schedule tracking.
+\textit{Description:} The authentication screens allow drivers and property managers to securely access the platform or register new accounts. They enforce input validation and issue JSON Web Tokens for role-based session control.
 
-\subsection{Reviews and Ratings}
+\subsection{Renter Profile and Vehicle Management}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Reviews and Ratings Interface ]}}
-    \caption{Community Reviews and Rating Screen}
+    \fbox{\includegraphics[width=0.85\textwidth]{{Renter Dashboard}.png}}
+    \caption{Renter Overview Dashboard and Personal Statistics}
 \end{figure}
-\textit{Description:} This section allows verified drivers to submit star ratings and detailed comments regarding facility quality and security. Building managers can monitor overall customer sentiment and respond directly to user feedback.
-
-\subsection{Invoice Generation}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Invoice Generation Interface ]}}
-    \caption{Automated PDF Invoice Document Screen}
+    \fbox{\includegraphics[width=0.85\textwidth]{{Vehicle Register}.png}}
+    \caption{Vehicle Registration and License Plate Management}
 \end{figure}
-\textit{Description:} This module displays the auto-generated digital invoice summarizing booking duration, fee items, and transaction IDs. Users can view the invoice online or download a formal PDF copy for personal records.
-
-\subsection{Building Management}
-\begin{figure}[H]
-    \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Building Management Interface ]}}
-    \caption{Building Registration and Administration Screen}
-\end{figure}
-\textit{Description:} Property administrators use this form to register new facilities, input street addresses, and define operational guidelines. It centralizes all building profiles under an intuitive management interface.
-
-\subsection{Slot Management}
-\begin{figure}[H]
-    \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Slot Management Interface ]}}
-    \caption{Parking Slot Grid and Status Controller}
-\end{figure}
-\textit{Description:} This dashboard provides a visual grid of parking bays categorized by vehicle type and floor level. Administrators can quickly alter slot availability statuses or assign spots for scheduled maintenance.
-
-\subsection{Dynamic Pricing}
-\begin{figure}[H]
-    \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Dynamic Pricing Configuration Interface ]}}
-    \caption{Dynamic Pricing Rules Configuration Screen}
-\end{figure}
-\textit{Description:} This view enables managers to define base hourly parking rates, weekend adjustments, and rush-hour surge pricing. Changes apply automatically to upfront price estimates shown to searching renters.
+\textit{Description:} These interfaces centralize renter metrics, past booking summaries, and vehicle license plate profiles to speed up gate verification and reservation checkout.
 
 \subsection{Search and Filter System}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Search and Filter System ]}}
+    \fbox{\includegraphics[width=0.85\textwidth]{{Search and Filter}.png}}
     \caption{Search and Multi-Criteria Filtering Interface}
 \end{figure}
-\textit{Description:} The search bar allows drivers to find facilities by location, vehicle compatibility, budget constraints, and user ratings. Search results refresh dynamically without requiring full-page browser reloads.
+\textit{Description:} The search and filter interface enables drivers to locate parking facilities by destination, vehicle type, and pricing parameters with instant responsive updates.
+
+\subsection{Map and Navigation}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{Navigation and Maps}.png}}
+    \caption{Interactive Map and Navigation Interface}
+\end{figure}
+\textit{Description:} This interface displays an interactive city map with color-coded building markers indicating available parking locations. Users can click any marker to review building capacity and launch live turn-by-turn driving directions.
+
+\subsection{Listing Booking History}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{booking list}.png}}
+    \caption{Recently Booking Listings }
+\end{figure}
+\textit{Description:} This panel displays a chronological list of recently booked parking spots and buildings, allowing renters to revisit options without searching again. Each listing card shows current availability, hourly pricing, and quick booking access.
+
+\subsection{Bookmarks and Favourite}
+\begin{figure}[H]
+    \centering
+    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Bookmarks and Favourite Listings ]}}
+    \caption{Saved Favorite Parking Facilities Screen}
+\end{figure}
+\textit{Description:} This screen organizes all bookmarked and favorited parking facilities saved by the driver for fast access. Users can check real-time spot availability at their favorite locations and initiate instant bookings without re-entering search criteria.
+
+\subsection{Slot Management}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{Dynamic Pricing}.png}}
+    \caption{Parking Slot Creation and Spatial Parameter Configuration Form}
+\end{figure}
+\textit{Description:} Facility administrators use this form to register and configure individual parking bays within a property, specifying slot designations, vehicle type compatibility, physical dimensions, and hourly, daily, and monthly base rental rates.
 
 \subsection{Bookings Feature}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Booking Reservation Interface ]}}
-    \caption{Active and Upcoming Bookings Manager}
+    \fbox{\includegraphics[width=0.85\textwidth]{{Booking 1}.png}}
+    \caption{Parking Facility Search and Building Availability Selection Screen}
 \end{figure}
-\textit{Description:} Drivers select arrival and departure times, confirm slot selections, and receive instant booking verification vouchers. The dashboard organizes past, active, and upcoming parking sessions chronologically.
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{booking 2}.png}}
+    \caption{Building Bay Expansion and Individual Slot Availability Screen}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{booking 3}.png}}
+    \caption{Slot Reservation Modal with Hourly Timeline Grid and Confirmation}
+\end{figure}
+\textit{Description:} The booking module guides renters through an intuitive multi-step reservation process directly from managed slot interfaces: discovering available facilities, expanding building listings to inspect specific bays, and picking reservation hours on the 24-hour availability schedule before finalizing their booking.
+
+\subsection{Dynamic Pricing}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{Pricing}.png}}
+    \caption{Dynamic Pricing Rules Dashboard and Quick-Start Templates}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{Slot Management}.png}}
+    \caption{Dynamic Surge Rule Creation and Occupancy Threshold Configuration Form}
+\end{figure}
+\textit{Description:} These screens allow property managers to manage automated surge pricing rules and discount policies based on real-time occupancy thresholds, operational time windows, and days of the week.
+
+\subsection{Payment}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{Payment}.png}}
+    \caption{Secure Payment Checkout Screen}
+\end{figure}
+\textit{Description:} The payment view presents a transparent fare breakdown alongside encrypted card and mobile banking checkout fields. It confirms transactions securely and instantly updates reservation statuses in real time.
+
+\subsection{Invoice Generation}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{Invoice}.png}}
+    \caption{Consolidated Billing Invoices and Transaction Records}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{InvoiceViewer}.png}}
+    \caption{Detailed Electronic PDF Invoice Viewer}
+\end{figure}
+\textit{Description:} The invoice screens provide a comprehensive billing ledger and an integrated PDF viewer for individual transactions, enabling renters and managers to audit charges and download formal tax receipts.
+
+\subsection{Subscription}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{Subscription(Not Done)}.png}}
+    \caption{Available Recurring Subscription Packages Selection}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{Subscription(Done)}.png}}
+    \caption{Active Subscription Management and Pass Status}
+\end{figure}
+\textit{Description:} These screens demonstrate the subscription lifecycle, allowing daily commuters to evaluate recurring parking passes and subsequently monitor their active subscription status, assigned bay, and renewal dates.
+
+\subsection{Check In/Out}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{CheckInOut}.png}}
+    \caption{Vehicle Check In and Check Out Interface}
+\end{figure}
+\textit{Description:} This interface allows gate attendants to verify arriving vehicles, record check-in timestamps, and validate vehicle check-outs against reserved time slots. It automatically flags overstays and confirms gate clearance once any pending fees are settled.
 
 \subsection{Overstay Detection and Penalty System}
 \begin{figure}[H]
@@ -328,37 +409,73 @@ This section contains dedicated placeholders for application screenshots across 
 \end{figure}
 \textit{Description:} This panel highlights overdue vehicles exceeding their reserved window and tallies automated penalty surcharges. It notifies both the driver and the facility attendant to facilitate rapid slot clearance.
 
-\subsection{Admin Control Panel}
+\subsection{Reviews and Ratings}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Admin Control Panel ]}}
-    \caption{Central Super-Admin Command Dashboard}
+    \fbox{\includegraphics[width=0.85\textwidth]{{Ratings and Reviews}.png}}
+    \caption{Community Reviews and Rating Screen}
 \end{figure}
-\textit{Description:} The administrative dashboard summarizes platform-wide activity metrics, user verification queues, and dispute logs. Super-admins use this console to manage platform policies and audit financial flows.
+\textit{Description:} This section allows verified drivers to submit star ratings and detailed comments regarding facility quality and security. Building managers can monitor overall customer sentiment and respond directly to user feedback.
 
-\subsection{Renter Profile and Vehicle Management}
+\subsection{Booking History}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Renter Profile and Vehicle Management ]}}
-    \caption{Driver Profile and Registered Vehicles Screen}
+    \fbox{\includegraphics[width=0.85\textwidth]{{Booking History}.png}}
+    \caption{Renter Booking History and Reservation Ledger Screen}
 \end{figure}
-\textit{Description:} Users manage personal contact data and register multiple vehicle license plates for streamlined booking validation. Having pre-saved vehicle profiles ensures prompt entry authentication at facility gates.
+\textit{Description:} The booking history screen lists all upcoming, active, completed, and cancelled reservations alongside itemized costs and payment statuses. Renters can view booking summaries, download PDF receipts, extend parking durations, or cancel reservations directly from this interface.
 
 \subsection{Notification and Alert System}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Notification and Alert System ]}}
-    \caption{In-App Notifications and Alerts Drawer}
+    \fbox{\includegraphics[width=0.85\textwidth]{{Notification}.png}}
+    \caption{In-App Notifications and Activity Alerts Drawer}
 \end{figure}
 \textit{Description:} This drawer displays real-time updates regarding booking confirmations, payment completions, and upcoming session expirations. Critical notifications are also forwarded via automated email dispatch.
+
+\subsection{Owner Dashboard}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{Owner Dashboard}.png}}
+    \caption{Owner Property and Earnings Dashboard}
+\end{figure}
+\textit{Description:} The owner dashboard provides facility hosts with a centralized overview of live slot occupancy, daily earnings, and upcoming reservations across their properties. It allows property owners to manage operations and monitor revenue streams without switching screens.
 
 \subsection{Reports and Export System}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Reports and Data Export Interface ]}}
-    \caption{Analytical Reports and CSV/Excel Export Screen}
+    \fbox{\includegraphics[width=0.85\textwidth]{{Report Export}.png}}
+    \caption{Analytical Revenue Reports and CSV/Excel Export Center}
 \end{figure}
-\textit{Description:} Property managers can review revenue trends and slot occupancy curves over custom time frames from this screen. Detailed transactional tables can be exported to CSV or Excel for accounting audits.
+\textit{Description:} Property managers can review revenue trends and slot occupancy curves over custom time frames, with full export capabilities to CSV and Excel for accounting audits.
+
+\subsection{Admin Control Panel}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{admin dash 1}.png}}
+    \caption{Admin Control Panel: System Metrics, Capacity, and Revenue Overview}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{admin dash 2}.png}}
+    \caption{Admin Control Panel: Platform User Directory and Account Governance}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{admin dash 3}.png}}
+    \caption{Admin Control Panel: Building Infrastructure and Facility Ownership Oversight}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{admin dash 4}.png}}
+    \caption{Admin Control Panel: Parking Slot Bay Registry and Status Management}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.85\textwidth]{{admin dash 5}.png}}
+    \caption{Admin Control Panel: System-Wide Booking Operations and Reservation Audit}
+\end{figure}
+\textit{Description:} The Admin Control Panel provides super-administrators with complete operational governance across the platform. It includes modular management views for real-time ecosystem analytics, user role administration, property and facility verification, parking slot registry oversight, and centralized booking audits with administrative cancellation controls.
 
 % ==============================================================================
 % 8. CHALLENGES
