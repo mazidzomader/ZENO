@@ -134,11 +134,21 @@ router.get("/:id", protect, async (req, res) => {
         )
       : null;
 
-    const vehicle = booking
-      ? await db.collection("vehicles").findOne(
-          { $or: [{ renterId: inv.renterId }, { renterId: tryId(inv.renterId) }] }
-        )
-      : null;
+    let vehicle = null;
+    if (booking?.vehicleId) {
+      vehicle = await db.collection("vehicles").findOne(
+        { $or: [{ _id: booking.vehicleId }, { _id: tryId(booking.vehicleId) }] }
+      );
+    }
+    if (!vehicle && inv.renterId) {
+      vehicle = await db.collection("vehicles").findOne(
+        { $or: [
+            { userId: inv.renterId }, { userId: tryId(inv.renterId) },
+            { renterId: inv.renterId }, { renterId: tryId(inv.renterId) }
+          ]
+        }
+      );
+    }
 
     // Building depends on slot — field may be 'building' OR 'buildingId' depending on
     // how the slot was created (old seed uses buildingId, new data uses building).

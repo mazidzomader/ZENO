@@ -62,6 +62,12 @@ function Navbar() {
             </>
           ) : (
             <>
+              <Link
+                to="/dashboard"
+                className="px-4 py-2 border-2 border-ink border-r-0 hover:bg-ink hover:text-bgBase"
+              >
+                Dashboard
+              </Link>
               {(user.role === "owner" || user.role === "admin") && (
                 <Link
                   to="/slots/mine"
