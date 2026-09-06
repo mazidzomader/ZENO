@@ -1,4 +1,3 @@
-const mongoose = require('mongoose');
 const CheckInOut = require('../models/CheckInOut');
 const Booking = require('../models/Booking');
 const Slot = require('../models/Slot');
@@ -7,9 +6,19 @@ const { createNotification } = require('../services/notificationService');
 
 // Helper to get the slot's hourly rate (or fallback to a default)
 const getSlotHourlyRate = async (slotId) => {
-  const slot = await Slot.findById(slotId);
+  const slot = await Slot.findById(slotId).lean();
   if (!slot) throw new Error('Slot not found');
   return slot.pricePerHour || 0;
+};
+
+// Update only the slot status. Using updateOne avoids re-validating old seeded
+// slot documents that may not contain newer required fields such as dimensions.
+const setSlotStatus = async (slotId, status) => {
+  if (!slotId) return;
+  await Slot.updateOne(
+    { _id: slotId, status: { $ne: 'inactive' } },
+    { $set: { status } }
+  );
 };
 
 // ── CHECK IN ──
@@ -18,48 +27,46 @@ exports.checkIn = async (req, res) => {
     const { bookingId } = req.params;
     const userId = req.user._id;
 
-    // Verify booking belongs to this renter and is in 'confirmed' or 'active' status
     const booking = await Booking.findOne({
       _id: bookingId,
       renterId: userId,
       status: { $in: ['confirmed', 'active'] },
     });
+
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found or not eligible for check-in.' });
     }
 
-    // Check if a check-in record already exists
     let record = await CheckInOut.findOne({ bookingId });
+
+    // Idempotent recovery: if a previous request recorded the timestamp but
+    // failed later while updating a legacy slot, finish the related status
+    // updates and return success instead of trapping the user in a loop.
+    if (record?.checkInTime) {
+      await Booking.updateOne({ _id: bookingId }, { $set: { status: 'active' } });
+      await setSlotStatus(booking.slotId, 'occupied');
+      return res.status(200).json({ message: 'Already checked in.', record });
+    }
+
     if (record) {
-      if (record.checkInTime) {
-        return res.status(400).json({ error: 'Already checked in.' });
-      }
-      // Update existing record
       record.checkInTime = new Date();
       record.status = 'checked-in';
     } else {
-      // Create new
       record = new CheckInOut({
         bookingId,
         checkInTime: new Date(),
         status: 'checked-in',
       });
     }
+
     await record.save();
+    await Booking.updateOne({ _id: bookingId }, { $set: { status: 'active' } });
+    await setSlotStatus(booking.slotId, 'occupied');
 
-    // Update booking status to 'active'
-    await Booking.findByIdAndUpdate(bookingId, { status: 'active' });
-
-    // ── SLOT STATUS SYNC ──
-    // Move the slot from "reserved" (booked but renter not yet on-site) to
-    // "occupied" (renter has physically checked in), so slot availability
-    // reflects real-world occupancy.
-    await Slot.findByIdAndUpdate(booking.slotId, { status: 'occupied' });
-
-    res.status(200).json({ message: 'Check-in successful', record });
+    return res.status(200).json({ message: 'Check-in successful', record });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 };
 
@@ -73,17 +80,27 @@ exports.checkOut = async (req, res) => {
       _id: bookingId,
       renterId: userId,
     });
+
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found.' });
     }
 
-    // Must have checked in first
     const record = await CheckInOut.findOne({ bookingId });
     if (!record || !record.checkInTime) {
       return res.status(400).json({ error: 'Must check in before checking out.' });
     }
+
+    // Recovery for the exact failure you hit: the timestamp/booking may have
+    // been saved before legacy Slot validation failed. Finish the slot release
+    // and return success.
     if (record.checkOutTime) {
-      return res.status(400).json({ error: 'Already checked out.' });
+      await Booking.updateOne({ _id: bookingId }, { $set: { status: 'completed' } });
+      await setSlotStatus(booking.slotId, 'available');
+      return res.status(200).json({
+        message: 'Check-out already recorded successfully',
+        record,
+        overstay: null,
+      });
     }
 
     const now = new Date();
@@ -91,33 +108,21 @@ exports.checkOut = async (req, res) => {
     record.status = 'checked-out';
     await record.save();
 
-    // Update booking status to 'completed'
-    await Booking.findByIdAndUpdate(bookingId, { status: 'completed' });
+    await Booking.updateOne({ _id: bookingId }, { $set: { status: 'completed' } });
+    await setSlotStatus(booking.slotId, 'available');
 
-    // ── SLOT STATUS SYNC ──
-    // Free the slot back up now that the renter has left, so it becomes
-    // bookable again. Skip if an owner deliberately deactivated the slot
-    // while the booking was in progress.
-    const slotForRelease = await Slot.findById(booking.slotId);
-    if (slotForRelease && slotForRelease.status !== 'inactive') {
-      slotForRelease.status = 'available';
-      await slotForRelease.save();
-    }
-
-    // ── OVERSTAY DETECTION ──
+    // Existing Feature 10 overstay behaviour is preserved. It is kept after
+    // the Feature 9 state changes so check-out tracking itself is reliable.
     const bookedEnd = new Date(booking.endTime);
     let penalty = null;
     let overstayMinutes = 0;
 
     if (now > bookedEnd) {
       overstayMinutes = Math.floor((now - bookedEnd) / (1000 * 60));
-      // Get slot hourly rate
       const hourlyRate = await getSlotHourlyRate(booking.slotId);
-      // Penalty rate: 1.5× hourly rate (can be made configurable later)
       const penaltyRate = hourlyRate * 1.5;
       const penaltyAmount = (overstayMinutes / 60) * penaltyRate;
 
-      // Create OverstayPenalty record
       penalty = new OverstayPenalty({
         bookingId: booking._id,
         overstayDuration: overstayMinutes,
@@ -127,9 +132,9 @@ exports.checkOut = async (req, res) => {
       });
       await penalty.save();
 
-      const slot = await Slot.findById(booking.slotId);
+      const slot = await Slot.findById(booking.slotId).lean();
       await createNotification({
-        userId: userId,
+        userId,
         type: 'overstay_alert',
         title: 'Overstay Penalty Applied',
         message: `You checked out late from slot ${slot?.slotNumber || 'your booking'}. An additional penalty of $${penalty.penaltyAmount} has been added.`,
@@ -138,7 +143,7 @@ exports.checkOut = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Check-out successful',
       record,
       overstay: penalty
@@ -147,11 +152,11 @@ exports.checkOut = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 };
 
-// ── GET check‑in/out status for a booking ──
+// ── GET check-in/out status for a booking ──
 exports.getStatus = async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -163,8 +168,15 @@ exports.getStatus = async (req, res) => {
     }
 
     const record = await CheckInOut.findOne({ bookingId });
-    res.json(record || { bookingId, checkInTime: null, checkOutTime: null, status: 'pending' });
+    return res.json(
+      record || {
+        bookingId,
+        checkInTime: null,
+        checkOutTime: null,
+        status: 'pending',
+      }
+    );
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 };

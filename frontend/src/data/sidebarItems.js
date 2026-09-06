@@ -12,38 +12,27 @@ export const sidebarItems = [
     icon: "LayoutDashboard",
     path: "/dashboard"
   },
-
-  {
-    id: "browseslots",
-    title: "Browse Slots",
-    icon: "Search",
-    path: "/slots/browse",
-    roles: ["renter"], // only visible to renter
-  },
-
   {
     id: "vehicles",
     title: "Vehicles",
     icon: "Car",
     path: "/collections/vehicles"
   },
-    {
+  {
     id: "buildings",
     title: "Buildings",
     icon: "Building",
-    path: "/slots/mine",
-    roles: ["owner", "admin"], // now points to the My Slots page
+    path: "/collections/buildings"
   },
   {
-    id: "pricingrules",
-    title: "Pricing Rules",
-    icon: "Tag",
-    path: "/pricing-rules",
-    roles: ["owner", "admin"],
+    id: "parkingslots",
+    title: "Parking Slots",
+    icon: "Grid",
+    path: "/collections/parkingslots"
   },
   {
     id: "bookings",
-    title: "My Bookings",
+    title: "Bookings",
     icon: "Calendar",
     path: "/bookings/history",
     roles: ["renter", "admin"], // a renter's own reservations
@@ -70,9 +59,9 @@ export const sidebarItems = [
   },
   {
     id: "checkinouts",
-    title: "Check-in/outs",
+    title: "Check-In / Check-Out",
     icon: "ClipboardCheck",
-    path: "/collections/checkinouts"
+    path: "/checkinout"
   },
   {
     id: "overstaypenalties",
