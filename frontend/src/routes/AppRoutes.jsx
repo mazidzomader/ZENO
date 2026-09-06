@@ -67,14 +67,14 @@ function AppRoutes() {
     <Routes>
       {/* Public Pages */}
       <Route path="/" element={<Home />} />
-      
-      {/* Feature 01 — Listing and Browsing */}
-      <Route path="/slots/browse" element={<BrowseSlots />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
       {/* Dynamic Database Table View Router */}
       <Route element={<DashboardLayout />}>
+        {/* Feature 01 — Listing and Browsing */}
+        <Route path="/slots/browse" element={<BrowseSlots />} />
+
         {/* Intercept 'reports' static path BEFORE the dynamic parameter fallback catches it added by real developer*/}
         <Route path="/collections/reports" element={<Reports />} />
         {/* Shortcut: If someone types just /reports, safely redirect them to the dashboard version added by real developer*/}

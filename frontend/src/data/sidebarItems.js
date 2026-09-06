@@ -4,40 +4,42 @@ export const sidebarItems = [
     title: "Admin Panel",
     icon: "Shield",
     path: "/admin",
-    roles: ["admin"], // only visible to admin
+    roles: ["admin"],
   },
   {
     id: "dashboard",
     title: "Dashboard",
     icon: "LayoutDashboard",
-    path: "/dashboard"
+    path: "/dashboard",
+    // Always visible to everyone (renter, owner, admin, guest)
   },
   {
     id: "vehicles",
     title: "Vehicles",
     icon: "Car",
-    path: "/collections/vehicles"
+    path: "/collections/vehicles",
+    roles: ["renter", "admin"],
   },
   {
     id: "browse-slots",
     title: "Browse Slots",
     icon: "Grid",
     path: "/slots/browse",
-    roles: ["renter", "admin"], // renters browse & book available slots
+    roles: ["renter", "admin"],
   },
   {
     id: "my-slots",
     title: "My Slots",
     icon: "Grid",
     path: "/slots/mine",
-    roles: ["owner", "admin"], // owners manage the slots they list
+    roles: ["owner", "admin"],
   },
   {
     id: "bookings",
     title: "Bookings",
     icon: "Calendar",
     path: "/bookings/history",
-    roles: ["renter", "admin"], // a renter's own reservations
+    roles: ["renter", "admin"],
   },
   {
     id: "recurring-bookings",
@@ -51,73 +53,83 @@ export const sidebarItems = [
     title: "Slot Bookings",
     icon: "Calendar",
     path: "/bookings/owner",
-    roles: ["owner"], // who's renting the owner's slots
+    roles: ["owner", "admin"],
   },
   {
     id: "navigation",
     title: "Navigation",
     icon: "Map",
-    path: "/navigation"
+    path: "/navigation",
+    roles: ["renter", "admin"],
   },
   {
     id: "checkinouts",
     title: "Check-In / Check-Out",
     icon: "ClipboardCheck",
-    path: "/checkinout"
+    path: "/checkinout",
+    roles: ["renter", "admin"],
   },
   {
     id: "overstaypenalties",
     title: "Overstay Penalties",
     icon: "AlertTriangle",
-    path: "/collections/overstaypenalties"
+    path: "/collections/overstaypenalties",
+    roles: ["renter", "owner", "admin"],
   },
   {
     id: "cancellationrefunds",
     title: "Cancellation and Refunds",
     icon: "Undo2",
-    path: "/collections/cancellationrefunds"
+    path: "/collections/cancellationrefunds",
+    roles: ["admin"],
   },
   {
     id: "invoices-view",
     title: "Invoice Viewer",
     icon: "Receipt",
-    path: "/invoices"
+    path: "/invoices",
+    roles: ["renter", "admin"],
   },
   {
     id: "payments",
     title: "Payments",
     icon: "CreditCard",
-    path: "/payments"
+    path: "/payments",
+    roles: ["renter", "admin"],
   },
-
   {
     id: "subscriptions",
     title: "Subscriptions",
     icon: "KeyRound",
-    path: "/subscriptions"
+    path: "/subscriptions",
+    roles: ["renter", "admin"],
   },
   {
     id: "reviews",
     title: "Ratings & Reviews",
     icon: "Star",
-    path: "/reviews"
+    path: "/reviews",
+    roles: ["renter", "admin"],
   },
   {
     id: "reports",
     title: "Reports",
     icon: "BarChart3",
-    path: "/collections/reports"
+    path: "/collections/reports",
+    roles: ["renter", "owner", "admin"],
   },
   {
     id: "notifications",
     title: "Notifications",
     icon: "Bell",
-    path: "/notifications"
+    path: "/notifications",
+    roles: ["renter", "owner", "admin"],
   },
   {
     id: "prelude",
     title: "Prelude",
     icon: "Database",
-    path: "/collections/prelude"
+    path: "/collections/prelude",
+    roles: ["admin"],
   }
 ];

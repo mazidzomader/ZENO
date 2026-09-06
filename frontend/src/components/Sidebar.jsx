@@ -14,9 +14,21 @@ export function Sidebar() {
   const { user } = useAuth();
 
   // Filter items based on user role
-  const visibleItems = sidebarItems.filter((item) => { // <-- CHANGE 3
-    if (item.roles) {return user && item.roles.includes(user.role);}
-    return true;});
+  const visibleItems = sidebarItems.filter((item) => {
+    // Admin has access to all sidebar items
+    if (user?.role === "admin") return true;
+
+    // Dashboard is always visible to all roles including guests
+    if (item.id === "dashboard") return true;
+
+    // If user has a role, check if it is allowed for this item
+    if (user?.role && item.roles) {
+      return item.roles.includes(user.role);
+    }
+
+    // Else (guest or unknown role): only dashboard is visible
+    return false;
+  });
     
   // Helper to filter sidebar items recursively
   const getFilteredItems = (items, query) => {
