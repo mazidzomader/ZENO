@@ -54,6 +54,7 @@ import PaymentsPage from "../pages/payment/PaymentsPage";
 import PaymentSuccess from "../pages/payment/PaymentSuccess";
 import PaymentCancel from "../pages/payment/PaymentCancel";
 import BulkPaymentSuccess from "../pages/payment/BulkPaymentSuccess";
+import PenaltyPaymentSuccess from "../pages/payment/PenaltyPaymentSuccess";
 
 import ExtendSuccess from "../pages/payment/ExtendSuccess";
 // Feature — Subscription Plans (Isolated)
@@ -140,6 +141,7 @@ function AppRoutes() {
 
         {/* Feature — Payments (Stripe, Isolated) */}
         <Route path="/payments" element={<PaymentsPage />} />
+        <Route path="/payment/penalty-success" element={<PenaltyPaymentSuccess />} />
 
         {/* Feature — Subscription Plans (Isolated) */}
         <Route path="/subscriptions" element={<SubscriptionPage />} />
