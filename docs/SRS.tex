@@ -101,7 +101,10 @@
 
 \newpage
 \pagenumbering{roman}
-\tableofcontents
+{
+  \setlength{\parskip}{0pt}
+  \tableofcontents
+}
 \newpage
 \pagenumbering{arabic}
 
@@ -488,12 +491,13 @@ This section contains visual interfaces and dedicated placeholders across the fu
 \end{figure}
 \begin{figure}[H]
     \centering
-    \fbox{\includegraphics[width=0.85\textwidth]{{admin dash 4}.png}}
+    \fbox{\includegraphics[width=0.75\textwidth]{{admin dash 4}.png}}
     \caption{Admin Control Panel: Parking Slot Bay Registry and Status Management}
 \end{figure}
+\vspace{-0.4cm}
 \begin{figure}[H]
     \centering
-    \fbox{\includegraphics[width=0.85\textwidth]{{admin dash 5}.png}}
+    \fbox{\includegraphics[width=0.75\textwidth]{{admin dash 5}.png}}
     \caption{Admin Control Panel: System-Wide Booking Operations and Reservation Audit}
 \end{figure}
 \textit{Description:} The Admin Control Panel provides super-administrators with complete operational governance across the platform. It includes modular management views for real-time ecosystem analytics, user role administration, property and facility verification, parking slot registry oversight, and centralized booking audits with administrative cancellation controls.
@@ -501,6 +505,7 @@ This section contains visual interfaces and dedicated placeholders across the fu
 % ==============================================================================
 % 8. CHALLENGES
 % ==============================================================================
+\vspace{-0.4cm}
 \section{Challenges}
 
 Developing a real-time, multi-tenant parking marketplace introduces several technical and architectural hurdles. One significant challenge is preventing race conditions during concurrent bookings, where two drivers attempt to reserve the same parking slot simultaneously. This requires implementing transactional locking mechanisms at the database level to ensure atomic status updates. 
@@ -510,6 +515,7 @@ Another demanding task is the automated overstay detection engine, which must ru
 % ==============================================================================
 % 9. CONCLUSION
 % ==============================================================================
+\vspace{-0.4cm}
 \section{Conclusion}
 
 ZENO provides an effective, full-stack digital solution for the widespread challenges of urban parking management. By connecting property owners with daily commuters through an intuitive web interface, it converts underutilized parking assets into productive revenue streams while removing driver parking stress. The platform consolidates map navigation, automated billing, transparent user reviews, and disciplined overstay monitoring into a cohesive workflow. 
@@ -519,6 +525,7 @@ Its modular architecture guarantees that future enhancements—such as automated
 % ==============================================================================
 % 10. REFERENCES
 % ==============================================================================
+\vspace{-0.4cm}
 \section{References}
 
 \begin{enumerate}[label={[\arabic*]}]
