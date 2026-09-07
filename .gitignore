@@ -143,8 +143,6 @@ vite.config.ts.timestamp-*
 .vite/
 
 # LaTeX
-*.tex
-*.pdf
 *.aux
 *.bbl
 *.blg
