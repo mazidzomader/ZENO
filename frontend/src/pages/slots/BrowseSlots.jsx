@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Bookmark, BookmarkCheck } from "lucide-react";
 import API from "../../services/api";
 
 function getBuildingDetails(slot) {
@@ -68,7 +69,7 @@ function formatDimensions(dimensions) {
   return "—";
 }
 
-function SlotCard({ slot }) {
+function SlotCard({ slot, isFavourited, onToggleFavourite, isTogglingFavourite }) {
   const slotId = slot._id || slot.id || `${slot.slotNumber}-${slot.floor}`;
 
   const hourlyRate = slot.pricePerHour ?? "—";
@@ -90,9 +91,33 @@ function SlotCard({ slot }) {
           </h3>
         </div>
 
-        <span className="border border-black bg-green-100 px-2 py-1 font-mono text-[10px] font-bold uppercase">
-          {slot.status || "Available"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="border border-black bg-green-100 px-2 py-1 font-mono text-[10px] font-bold uppercase">
+            {slot.status || "Available"}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => onToggleFavourite(slotId)}
+            disabled={isTogglingFavourite}
+            aria-label={
+              isFavourited ? "Remove from saved slots" : "Save this slot"
+            }
+            aria-pressed={isFavourited}
+            title={isFavourited ? "Remove from saved slots" : "Save this slot"}
+            className={`flex h-7 w-7 items-center justify-center border-2 transition-none disabled:opacity-50 ${
+              isFavourited
+                ? "border-black bg-amber-400 text-black"
+                : "border-black bg-white text-black hover:bg-amber-100"
+            }`}
+          >
+            {isFavourited ? (
+              <BookmarkCheck className="h-4 w-4" strokeWidth={2.5} />
+            ) : (
+              <Bookmark className="h-4 w-4" strokeWidth={2.5} />
+            )}
+          </button>
+        </div>
       </div>
 
       <dl className="mt-3 grid grid-cols-2 gap-2 font-mono text-xs">
@@ -152,7 +177,14 @@ function SlotCard({ slot }) {
   );
 }
 
-function BuildingGroup({ group, isOpen, onToggle }) {
+function BuildingGroup({
+  group,
+  isOpen,
+  onToggle,
+  favouriteIds,
+  onToggleFavourite,
+  togglingFavouriteId,
+}) {
   const { building, owner, slots } = group;
   const availableCount = slots.filter(
     (s) => String(s.status || "available").toLowerCase() === "available"
@@ -226,9 +258,18 @@ function BuildingGroup({ group, isOpen, onToggle }) {
           )}
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {slots.map((slot) => (
-              <SlotCard key={slot._id || slot.id || `${slot.slotNumber}-${slot.floor}`} slot={slot} />
-            ))}
+            {slots.map((slot) => {
+              const slotId = slot._id || slot.id || `${slot.slotNumber}-${slot.floor}`;
+              return (
+                <SlotCard
+                  key={slotId}
+                  slot={slot}
+                  isFavourited={favouriteIds.has(slotId)}
+                  onToggleFavourite={onToggleFavourite}
+                  isTogglingFavourite={togglingFavouriteId === slotId}
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -245,6 +286,9 @@ function BrowseSlots() {
   const [typeFilter, setTypeFilter] = useState("");
   const [sizeFilter, setSizeFilter] = useState("");
   const [openBuildings, setOpenBuildings] = useState({});
+
+  const [favouriteIds, setFavouriteIds] = useState(new Set());
+  const [togglingFavouriteId, setTogglingFavouriteId] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -273,12 +317,75 @@ function BrowseSlots() {
       }
     }
 
+    async function loadFavourites() {
+      try {
+        const response = await API.get("/favourites");
+        const favourites = response.data.favourites || [];
+        if (isMounted) {
+          setFavouriteIds(
+            new Set(
+              favourites
+                .map((fav) => fav.slot?._id || fav.slot)
+                .filter(Boolean)
+            )
+          );
+        }
+      } catch (err) {
+        // Not fatal to browsing slots — just leave favourites empty.
+        console.error("Failed to load saved slots:", err);
+      }
+    }
+
     loadSlots();
+    loadFavourites();
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const toggleFavourite = async (slotId) => {
+    if (!slotId || togglingFavouriteId) return;
+
+    const alreadySaved = favouriteIds.has(slotId);
+    setTogglingFavouriteId(slotId);
+
+    // Optimistic update
+    setFavouriteIds((prev) => {
+      const next = new Set(prev);
+      if (alreadySaved) {
+        next.delete(slotId);
+      } else {
+        next.add(slotId);
+      }
+      return next;
+    });
+
+    try {
+      if (alreadySaved) {
+        await API.delete(`/favourites/${slotId}`);
+      } else {
+        await API.post("/favourites", { slotId });
+      }
+    } catch (err) {
+      // Roll back on failure
+      setFavouriteIds((prev) => {
+        const next = new Set(prev);
+        if (alreadySaved) {
+          next.add(slotId);
+        } else {
+          next.delete(slotId);
+        }
+        return next;
+      });
+      alert(
+        err.response?.data?.message ||
+          "Could not update your saved slots. Please try again."
+      );
+    } finally {
+      setTogglingFavouriteId(null);
+    }
+  };
 
   const filteredSlots = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -520,6 +627,9 @@ function BrowseSlots() {
               group={group}
               isOpen={!!openBuildings[group.key]}
               onToggle={() => toggleBuilding(group.key)}
+              favouriteIds={favouriteIds}
+              onToggleFavourite={toggleFavourite}
+              togglingFavouriteId={togglingFavouriteId}
             />
           ))}
         </div>

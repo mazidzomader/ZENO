@@ -28,6 +28,13 @@ export const sidebarItems = [
     roles: ["renter", "admin"],
   },
   {
+    id: "saved-slots",
+    title: "My Saved Slots",
+    icon: "Bookmark",
+    path: "/slots/saved",
+    roles: ["renter", "admin"],
+  },
+  {
     id: "my-slots",
     title: "My Slots",
     icon: "Grid",

@@ -1,4 +1,5 @@
 import BrowseSlots from "../pages/slots/BrowseSlots";
+import MySavedSlots from "../pages/slots/MySavedSlots";
 import { Routes, Route, Navigate } from "react-router-dom";
 import BookingHistory from "../pages/bookings/BookingHistory";
 import OwnerBookings from "../pages/bookings/OwnerBookings";
@@ -75,6 +76,7 @@ function AppRoutes() {
       <Route element={<DashboardLayout />}>
         {/* Feature 01 — Listing and Browsing */}
         <Route path="/slots/browse" element={<BrowseSlots />} />
+        <Route path="/slots/saved" element={<MySavedSlots />} />
 
         {/* Intercept 'reports' static path BEFORE the dynamic parameter fallback catches it added by real developer*/}
         <Route path="/collections/reports" element={<Reports />} />
