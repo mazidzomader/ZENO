@@ -126,15 +126,6 @@ INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\tex\latex\epstopdf-pkg\epstop
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\tex\latex\00miktex\epstopdf-sys.cfg
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\tex\latex\00miktex\epstopdf-sys.cfg
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\tex\latex\00miktex\epstopdf-sys.cfg
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmcsc10.tfm
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmcsc10.tfm
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmcsc10.tfm
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmr17.tfm
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmbx12.tfm
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmr12.tfm
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmti12.tfm
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmbx12.tfm
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmbx12.tfm
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmr8.tfm
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmr6.tfm
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmmi12.tfm
@@ -143,12 +134,30 @@ INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmmi6.tfm
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmsy10.tfm
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmsy8.tfm
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmsy6.tfm
+INPUT .\ScreenShots\logo.png
+INPUT .\ScreenShots\logo.png
+INPUT .\ScreenShots\logo.png
+INPUT .\ScreenShots\logo.png
+INPUT .\ScreenShots\logo.png
+INPUT .\ScreenShots\logo.png
+INPUT .\ScreenShots\zeno.png
+INPUT .\ScreenShots\zeno.png
+INPUT .\ScreenShots\zeno.png
+INPUT .\ScreenShots\zeno.png
+INPUT .\ScreenShots\zeno.png
+INPUT .\ScreenShots\zeno.png
+INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmr17.tfm
+INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmbx12.tfm
+INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmr12.tfm
+INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmbx12.tfm
+INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmr17.tfm
+INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmbx12.tfm
+INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmbx12.tfm
+INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmbxti10.tfm
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\tex\generic\stringenc\se-pdfdoc.def
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\tex\generic\stringenc\se-pdfdoc.def
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\tex\generic\stringenc\se-pdfdoc.def
 INPUT C:\Users\Mazid\AppData\Local\MiKTeX\fonts\map\pdftex\pdftex.map
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmr17.tfm
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmbx12.tfm
 INPUT .\SRS.toc
 INPUT .\SRS.toc
 INPUT SRS.toc
@@ -280,6 +289,12 @@ INPUT .\ScreenShots\CheckInOut.png
 INPUT .\ScreenShots\CheckInOut.png
 INPUT .\ScreenShots\CheckInOut.png
 INPUT .\ScreenShots\CheckInOut.png
+INPUT .\ScreenShots\overstay penalties.png
+INPUT .\ScreenShots\overstay penalties.png
+INPUT .\ScreenShots\overstay penalties.png
+INPUT .\ScreenShots\overstay penalties.png
+INPUT .\ScreenShots\overstay penalties.png
+INPUT .\ScreenShots\overstay penalties.png
 INPUT .\ScreenShots\Ratings and Reviews.png
 INPUT .\ScreenShots\Ratings and Reviews.png
 INPUT .\ScreenShots\Ratings and Reviews.png
@@ -346,8 +361,8 @@ INPUT .\SRS.out
 INPUT .\SRS.out
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmbx12.pfb
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmbx12.pfb
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmcsc10.pfb
-INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmcsc10.pfb
+INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmbxti10.pfb
+INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmbxti10.pfb
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmr12.pfb
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmr12.pfb
 INPUT C:\Users\Mazid\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmti12.pfb

@@ -32,50 +32,71 @@
 % ==============================================================================
 \begin{titlepage}
     \pagenumbering{gobble}
-    \centering
+    \begin{center}
     
-    % University & Course Header
-    \textsc{\Large BRAC University}\\[0.3cm]
-    \textsc{\large Department of Computer Science and Engineering}\\[0.2cm]
-    \textsc{\large CSE470 -- Software Engineering | Summer 2026}\\[1.5cm]
-    
-    \rule{\linewidth}{1.5pt}\\[0.6cm]
-    
-    % Document & Project Title
-    {\Huge \bfseries SOFTWARE REQUIREMENTS SPECIFICATION}\\[0.4cm]
-    {\large for}\\[0.4cm]
-    {\huge \bfseries ZENO}\\[0.4cm]
-    {\large \textit{A Web-Based Parking Area Rental and Management System}}\\[0.6cm]
-    
-    \rule{\linewidth}{1.5pt}\\[2.0cm]
-    
-    % Authors Section
-    \begin{minipage}{0.85\textwidth}
-        \centering
-        \textbf{\large Prepared By (Authors)}\\[0.6cm]
-        \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}ll}
-            \toprule
-            \textbf{Student ID} & \textbf{Author Name} \\
-            \midrule
-            24241189 & Abdullah Al Mazid Zomader \\
-            23201003 & Masrur Sarar \\
-            22299250 & Sraboni Din Awal \\
-            22299058 & Arobi Al Amin Twinkle \\
-            \bottomrule
-        \end{tabular*}
-    \end{minipage}
-    
-    \vfill
-    
-    % Document Metadata / Control
-    \begin{minipage}{0.85\textwidth}
-        \begin{tabular}{ll}
-            \textbf{Document Version:} & 1.0 \\
-            \textbf{Document Status:}  & Initial Working Specification \\
-            \textbf{Date:}             & September 06, 2026 \\
+        % ---- LOGO ----
+        \vspace*{0.2cm}
+        \begin{tabular}{ c | c }
+            \includegraphics[width=6.5cm, height=5cm, keepaspectratio]{logo.png} & 
+            \includegraphics[width=6.5cm, height=5cm, keepaspectratio]{zeno.png}
         \end{tabular}
-    \end{minipage}
-    
+        \vspace{0.4cm}
+
+        % ---- UNIVERSITY / DEPARTMENT ----
+        {\Large \textbf{BRAC University}}\\[0.2cm]
+        {\large Department of Computer Science and Engineering}\\[0.4cm]
+
+        % ---- PROJECT TITLE ----
+        \rule{\textwidth}{1pt}\\[0.4cm]
+        {\Large \textbf{SOFTWARE REQUIREMENTS SPECIFICATION}}\\[0.3cm]
+        {\large \textbf{for}}\\[0.3cm]
+        {\huge \textbf{ZENO}}\\[0.3cm]
+        {\normalsize \textbf{\textit{A Web-Based Parking Area Rental and Management System}}}\\[0.2cm]
+        \rule{\textwidth}{1pt}
+
+        % ---- STUDENT DETAILS ----
+        \begin{flushleft}
+        \vspace{0.4cm}
+        \noindent\textbf{Prepared By:}\\[0.2cm]
+
+        \begin{minipage}{0.49\textwidth}
+            \textbf{Name: Abdullah Al Mazid Zomader}\\
+            ID: 24241189
+        \end{minipage}
+        \hfill
+        \begin{minipage}{0.49\textwidth}
+            \textbf{Name: Masrur Sarar}\\
+            ID: 23201003
+        \end{minipage}
+
+        \vspace{0.2cm}
+
+        \begin{minipage}{0.49\textwidth}
+            \textbf{Name: Sraboni Din Awal}\\
+            ID: 22299250
+        \end{minipage}
+        \hfill
+        \begin{minipage}{0.49\textwidth}
+            \textbf{Name: Arobi Al Amin Twinkle}\\
+            ID: 22299058
+        \end{minipage}
+
+        \vspace{0.4cm}
+
+        \textbf{Course Information:}\\[0.1cm]
+        Course Code: CSE470\\
+        Course Title: Software Engineering\\[0.3cm]
+
+        \textbf{Document Information:}\\[0.1cm]
+        Document Version: 3.0\\
+        Document Status: Software Requirement Specification\\[0.3cm]
+
+        Date: September 06, 2026\\
+        Semester: Summer 2026
+        \end{flushleft}
+
+        \vfill
+    \end{center}
 \end{titlepage}
 
 \newpage
@@ -142,7 +163,7 @@ The Bookings module oversees the complete lifecycle of temporary vehicle parking
 The Dynamic Pricing engine allows building owners to optimize revenue based on shifting parking demand and specific time slots. Property managers can establish standard baseline hourly rates alongside customized weekend, peak-hour, or nighttime charges. When demand in a commercial district surges during business hours, the system can apply defined surge multipliers automatically. Conversely, off-peak discount rules can be enabled to attract drivers during historically quiet evenings. Renters always review transparent, pre-calculated pricing estimates before completing any checkout. This pricing flexibility maximizes property earnings while maintaining honest pricing transparency.
 
 \subsection{Payment}
-The Payment feature delivers a frictionless and protected checkout experience for hourly bookings and overdue penalty fees. It integrates reliable digital payment gateways such as Stripe and SSLCommerz to handle debit cards, credit cards, and mobile financial services. When a driver confirms a reservation, the system computes the exact payable total including applicable taxes and processing fees. All sensitive transaction details are handled through encrypted channels without saving raw card numbers on the server. After payment confirmation, the transaction record is instantly stored in the database. Both the renter and the building owner receive immediate financial updates.
+The Payment feature delivers a frictionless and protected checkout experience for hourly bookings and overdue penalty fees. It integrates a reliable digital payment gateway such as Stripe to handle debit cards, credit cards, and mobile financial services. When a driver confirms a reservation, the system computes the exact payable total including applicable taxes and processing fees. All sensitive transaction details are handled through encrypted channels without saving raw card numbers on the server. After payment confirmation, the transaction record is instantly stored in the database. Both the renter and the building owner receive immediate financial updates.
 
 \subsection{Invoice Generation}
 The Invoice Generation module automates legal financial documentation for every completed monetary transaction. Leveraging server-side PDFKit engines, the system compiles booking duration, slot identifier, building address, and total paid amounts into a clean PDF bill. Every invoice includes a unique serial number, timestamp, and breakdown of baseline fees versus penalties. Users can view and download invoices directly from their booking history dashboard at any time. Building managers can also generate consolidated billing statements for monthly accounting reviews. This built-in reporting guarantees compliance and eliminates manual bookkeeping errors.
@@ -235,7 +256,7 @@ The class diagram below outlines the core domain entities of the ZENO platform a
     \item \textbf{Bcryptjs:} Industrial-grade cryptographic hashing library protecting stored user credentials against rainbow table and brute-force intrusions.
     \item \textbf{PDFKit:} Dynamic server-side document generation engine that compiles transaction and booking data into downloadable PDF invoices.
     \item \textbf{Nodemailer:} Modular email delivery package responsible for dispatching automated booking confirmations, overstay alerts, and receipts.
-    \item \textbf{Stripe / SSLCommerz Gateway Integrations:} Secure merchant payment processors facilitating encrypted credit card, debit card, and mobile banking transactions.
+    \item \textbf{Stripe Gateway Integration:} Secure merchant payment processor facilitating encrypted credit card, debit card, and mobile banking transactions.
 \end{itemize}
 
 % ==============================================================================
@@ -404,7 +425,7 @@ This section contains visual interfaces and dedicated placeholders across the fu
 \subsection{Overstay Detection and Penalty System}
 \begin{figure}[H]
     \centering
-    \framebox[\textwidth]{\rule{0pt}{4.5cm}\centering \textbf{[ Screenshot: Overstay and Penalty Interface ]}}
+    \fbox{\includegraphics[width=0.85\textwidth]{{overstay penalties}.png}}
     \caption{Overstay Tracking and Penalty Processing Screen}
 \end{figure}
 \textit{Description:} This panel highlights overdue vehicles exceeding their reserved window and tallies automated penalty surcharges. It notifies both the driver and the facility attendant to facilitate rapid slot clearance.
